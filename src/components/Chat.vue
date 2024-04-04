@@ -80,6 +80,7 @@ onMounted(() => {
   grid-template-rows: 1fr auto;
   width: 100%;
   max-height: 100%;
+  background-color: var(--color-background);
 
   &__messages {
     overflow: auto;

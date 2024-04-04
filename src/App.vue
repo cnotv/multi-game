@@ -28,11 +28,13 @@ import { RouterLink, RouterView } from 'vue-router'
   &__header {
     background-color: var(--color-background-soft);
     padding: 0.5em 1em;
+    z-index: 1;
   }
 
   &__main {
     overflow: auto;
-    display: flex;
+    position: relative;
+    overflow: hidden;
   }
 }
 </style>
