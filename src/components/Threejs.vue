@@ -11,12 +11,14 @@ const props = defineProps<{
   users: User[]
 }>()
 
+let velocityY = 0
+const gravity = 0.01
+
 const keyState: Record<string, boolean> = {}
 const keyUp = (event: KeyboardEvent) => (keyState[event.key] = true)
 const keyDown = (event: KeyboardEvent) => (keyState[event.key] = false)
 
 onMounted(() => {
-  // window.addEventListener('keydown', console.log)
 
   const handleFocusIn = () => (isFocused.value = false)
   const handleFocusOut = () => (isFocused.value = true)
@@ -25,6 +27,7 @@ onMounted(() => {
   window.addEventListener('focusout', handleFocusOut)
   window.addEventListener('keydown', keyUp)
   window.addEventListener('keyup', keyDown)
+  // window.addEventListener('keydown', console.log)
 
   onUnmounted(() => {
     window.removeEventListener('focusin', handleFocusIn)
@@ -80,12 +83,27 @@ const init = (canvas: HTMLCanvasElement) => {
       requestAnimationFrame(animate);
 
       if (isFocused.value) {
-        if (keyState['ArrowUp'] || keyState['w']) cubes[0].position.y += 0.1
-        if (keyState['ArrowDown'] || keyState['s']) cubes[0].position.y -= 0.1
+        if (keyState['ArrowUp'] || keyState['w']) cubes[0].position.z += 0.1
+        if (keyState['ArrowDown'] || keyState['s']) cubes[0].position.z -= 0.1
         if (keyState['ArrowLeft'] || keyState['a']) cubes[0].position.x -= 0.1
         if (keyState['ArrowRight'] || keyState['d']) cubes[0].position.x += 0.1
+
+        if (keyState[' ']) {
+          velocityY = 0.1  // Set an upward velocity when the space key is pressed
+        }
       }
 
+
+      // Apply the velocity and gravity
+      velocityY -= gravity
+      cubes[0].position.y += velocityY
+
+      // Prevent the cube from falling below the ground
+      if (cubes[0].position.y < 0) {
+        cubes[0].position.y = 0
+        velocityY = 0
+      }
+  
       orbit.update();
 
       renderer.render( scene, camera );
