@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, nextTick } from 'vue'
+import { ref, onMounted, nextTick, onUnmounted } from 'vue'
 
 const props = defineProps<{
   messages: Message[]
@@ -40,7 +40,17 @@ const scrollToBottom = () => {
 }
 
 onMounted(() => {
-  focusInput()
+  const handleKeydown = (event: KeyboardEvent) => {
+    if (event.key === 'Enter') {
+      focusInput()
+    }
+  };
+
+  window.addEventListener('keydown', handleKeydown);
+
+  onUnmounted(() => {
+    window.removeEventListener('keydown', handleKeydown);
+  });
   scrollToBottom()
 })
 </script>
@@ -53,7 +63,10 @@ onMounted(() => {
         :class="{ 'chat__messages__item--user': message.name === user.name }"
         v-for="message in messages"
         :key="message.id"
-      >{{ message.name }}: {{ message.text }}</div>
+      >
+        <span v-if="message.name !== user.name">{{ message.name }}: </span>
+        <span>{{ message.text }}</span>
+      </div>
     </div>
 
     <form
@@ -63,6 +76,7 @@ onMounted(() => {
       <input 
         class="chat__actions__input"
         type="text"
+        placeholder="Press enter to type"
         v-model="userMessage"
         ref="inputElement"
       />
@@ -100,6 +114,7 @@ onMounted(() => {
 
       &--user {
         background-color: var(--color-background-user);
+        color: var(--color-text-user);
         justify-self: right;
         align-self: flex-end;
       }
