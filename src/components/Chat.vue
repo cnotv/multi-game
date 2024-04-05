@@ -14,7 +14,7 @@ const emit = defineEmits<{
   (event: 'new-message', payload: Message): void
 }>()
 
-const sendMessage = () => {
+const onSendMessage = () => {
   if (!userMessage.value) return
 
   emit('new-message', {
@@ -71,7 +71,7 @@ onMounted(() => {
 
     <form
       class="chat__actions"
-      @submit.prevent="sendMessage"
+      @submit.prevent="onSendMessage"
     >
       <input 
         class="chat__actions__input"

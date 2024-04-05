@@ -4,7 +4,6 @@ import { ref, onMounted, onUnmounted } from 'vue';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js';
 import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js';
-import { loadEnvFile } from 'process';
 
 const isFocused = ref(true)
 const canvas = ref(null)
@@ -42,7 +41,7 @@ onMounted(() => {
   );
 })
 
-const loadFonts = (meshes: THREE.Mesh<THREE.DodecahedronGeometry, THREE.ShaderMaterial, THREE.Object3DEventMap>[]) => {
+const loadFonts = (meshes: THREE.Mesh<THREE.BoxGeometry, THREE.MeshStandardMaterial, THREE.Object3DEventMap>[]) => {
   // Load the font
   const loader = new FontLoader();
   const fontFile = new URL('../assets/Lato_Regular.json', import.meta.url) as unknown as string;
@@ -64,7 +63,7 @@ const loadFonts = (meshes: THREE.Mesh<THREE.DodecahedronGeometry, THREE.ShaderMa
   });
 }
 
-const loadCubes = (scene: THREE.Scene, orbit: THREE.OrbitControls) => {
+const loadCubes = (scene: THREE.Scene, orbit: OrbitControls) => {
   // Add cubes
   const geometry = new THREE.BoxGeometry( 1, 1, 1 );
   const material = new THREE.MeshStandardMaterial({
@@ -85,7 +84,7 @@ const loadEnv = (scene: THREE.Scene) => {
 
   // Create the ground
   const groundGeometry = new THREE.PlaneGeometry(100, 100);
-  const groundTexture = loader.load(new URL('../assets/grass.jpg', import.meta.url));
+  const groundTexture = loader.load(new URL('../assets/grass.jpg', import.meta.url) as unknown as string);
   const groundMaterial = new THREE.MeshBasicMaterial({ map: groundTexture });
   const ground = new THREE.Mesh(groundGeometry, groundMaterial);
   ground.rotation.x = -Math.PI / 2;  // Rotate the ground to make it horizontal
@@ -94,7 +93,7 @@ const loadEnv = (scene: THREE.Scene) => {
 
   // Create the sky
   const skyGeometry = new THREE.SphereGeometry(50, 32, 32);
-  const skyTexture = loader.load(new URL('../assets/sky.png', import.meta.url));
+  const skyTexture = loader.load(new URL('../assets/sky.png', import.meta.url) as unknown as string);
   const skyMaterial = new THREE.MeshBasicMaterial({ map: skyTexture, side: THREE.BackSide });
   const sky = new THREE.Mesh(skyGeometry, skyMaterial);
   scene.add(sky);
