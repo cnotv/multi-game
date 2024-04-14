@@ -10,7 +10,7 @@ export const useUsersStore = defineStore("user", {
     bindEvents() {
       // sync the list of users upon connection
       socket.on("connect", () => {
-        socket.emit("user:list", (res) => {
+        socket.emit("user:list", () => {
         });
       });
 
@@ -20,16 +20,16 @@ export const useUsersStore = defineStore("user", {
       });
     },
 
-    createUser(label) {
-      const user = {
-        id: Date.now(), // temporary ID for v-for key
-        label
-      };
-      this.users.push(user);
+    // createUser(label) {
+    //   const user = {
+    //     id: Date.now(), // temporary ID for v-for key
+    //     label
+    //   };
+    //   this.users.push(user);
 
-      socket.emit("user:create", { label }, (res) => {
-        user.id = res.data;
-      });
-    },
+    //   socket.emit("user:create", { label }, (res) => {
+    //     user.id = res.data;
+    //   });
+    // },
   },
 });
