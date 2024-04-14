@@ -11,17 +11,13 @@ const messagesContainer = ref<HTMLInputElement>()
 const inputElement = ref<HTMLInputElement>()
 
 const emit = defineEmits<{
-  (event: 'new-message', payload: Message): void
+  (event: 'new-message', payload: string): void
 }>()
 
 const onSendMessage = () => {
   if (!userMessage.value) return
 
-  emit('new-message', {
-    id: props.messages.length.toString(),
-    name: props.user.name,
-    text: userMessage.value
-  })
+  emit('new-message', userMessage.value)
   userMessage.value = ''
   focusInput()
   scrollToBottom()

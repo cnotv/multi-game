@@ -4,20 +4,28 @@ import { useUsersStore } from "@/stores/users";
 import { useConnectionStore } from "@/stores/connection";
 import { socket } from "@/socket";
 
-const itemStore = useUsersStore();
+const userStore = useUsersStore();
 const connectionStore = useConnectionStore();
 
 // remove any existing listeners (after a hot module replacement)
 socket.off();
 
-itemStore.bindEvents();
+userStore.bindEvents();
 connectionStore.bindEvents();
+userStore.createUser(`User${Math.floor(Math.random() * 1000)}`);
 </script>
 
 <template>
   <div class="layout">
     <header class="layout__header">
       <nav class="layout__header__nav">
+        <input 
+          type="text"
+          placeholder="Press enter to type"
+          :value="userStore.user.name"
+          @input="(event: Event) => userStore.changeUserName(event.target!.value)"
+          ref="inputElement"
+        />
         <RouterLink to="/">Chat room</RouterLink>
         <!-- <RouterLink to="/about">About</RouterLink> -->
         {{ connectionStore.isConnected ? 'Connected' : 'Disconnected' }}

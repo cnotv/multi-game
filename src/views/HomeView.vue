@@ -2,22 +2,18 @@
 import { reactive } from 'vue'
 import Chat from '@/components/Chat.vue'
 import Threejs from '@/components/Threejs.vue'
+import { useUsersStore } from "@/stores/users";
 
-const messages: Message[] = reactive(Array.from(Array(1).keys()).map((i) => ({
-  text: 'Hello!',
-  name: 'Bot',
-  id: i.toString()
-})))
-const user: User = { name: 'Dude', id: '1' }
+const userStore = useUsersStore();
 </script>
 
 <template>
-  <Threejs :users="[user]" />
+  <Threejs :users="[userStore.user]" />
   <Chat
     class="chat-wrap"
-    :messages="messages"
-    :user="user"
-    @new-message="(message) => messages.push(message)"
+    :messages="userStore.messages"
+    :user="userStore.user"
+    @new-message="(message) => userStore.sendMessage(message)"
   />
 </template>
 

@@ -4,6 +4,11 @@ import { socket } from "@/socket";
 export const useUsersStore = defineStore("user", {
   state: () => ({
     users: [] as User[],
+    user: {
+      id: Date.now().toString(),
+      name: `Guest + Date.now().toString()`,
+    } as User,
+    messages: [] as Message[],
   }),
 
   actions: {
@@ -18,18 +23,44 @@ export const useUsersStore = defineStore("user", {
       socket.on("user:created", (user: User) => {
         this.users.push(user);
       });
+
+      // update the store when an user name changes
+      socket.on("user:changed", (users: User[]) => {
+        this.users = users;
+      });
+
+      // update the store when a message is received
+      socket.on("message:created", (message: Message) => {
+        this.messages.push(message);
+      });
     },
 
-    // createUser(label) {
-    //   const user = {
-    //     id: Date.now(), // temporary ID for v-for key
-    //     label
-    //   };
-    //   this.users.push(user);
+    createUser(name: string) {
+      const user: User = {
+        id: Date.now().toString(), // temporary ID for v-for key
+        name
+      };
+      this.users.push(user);
+      this.user = user;
 
-    //   socket.emit("user:create", { label }, (res) => {
-    //     user.id = res.data;
-    //   });
-    // },
+      socket.emit("user:create", { name }, (res: any) => {
+        user.id = res.data;
+      });
+    },
+
+    changeUserName(name: string) {
+      socket.emit("user:change", {
+        name,
+        id: this.user.id,
+      });
+    },
+
+    sendMessage(message: string) {    
+      socket.emit("message:create", { 
+          name: this.user.name,
+          id: this.user.id,
+          text: message,
+       });
+    },
   },
 });
