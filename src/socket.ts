@@ -8,7 +8,7 @@ export const state = reactive({
 });
 
 // "undefined" means the URL will be computed from the `window.location` object
-const URL = process.env.NODE_ENV === "production" ? undefined : "http://localhost:3000" as any;
+const URL = process.env.NODE_ENV === "production" ? "http://18.159.209.99:3000" : "http://localhost:3000" as any;
 
 export const socket = io(URL);
 
