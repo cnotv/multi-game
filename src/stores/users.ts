@@ -40,11 +40,11 @@ export const useUsersStore = defineStore("user", {
         id: Date.now().toString(), // temporary ID for v-for key
         name
       };
-      this.users.push(user);
       this.user = user;
 
       socket.emit("user:create", { name }, (res: any) => {
         user.id = res.data;
+        this.users.push(user);
       });
     },
 
@@ -53,14 +53,15 @@ export const useUsersStore = defineStore("user", {
         name,
         id: this.user.id,
       });
+      this.user.name = name;
     },
 
-    sendMessage(message: string) {    
+    sendMessage(message: string) {   
       socket.emit("message:create", { 
-          name: this.user.name,
-          id: this.user.id,
-          text: message,
-       });
+        name: this.user.name,
+        id: this.user.id,
+        text: message,
+      });
     },
   },
 });

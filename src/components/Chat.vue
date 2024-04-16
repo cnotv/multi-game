@@ -56,11 +56,11 @@ onMounted(() => {
     <div class="chat__messages" ref="messagesContainer">
       <div
         class="chat__messages__item"
-        :class="{ 'chat__messages__item--user': message.name === user.name }"
+        :class="{ 'chat__messages__item--user': message.id === user.id }"
         v-for="message in messages"
         :key="message.id"
       >
-        <span v-if="message.name !== user.name">{{ message.name }}: </span>
+        <span v-if="message.id !== user.id">{{ message.name }}: </span>
         <span>{{ message.text }}</span>
       </div>
     </div>
