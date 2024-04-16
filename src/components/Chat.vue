@@ -86,6 +86,15 @@ onMounted(() => {
 
 <style scoped lang="scss">
 .chat {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  max-width: 300px;
+  height: 100%;
+  background-color: white;
+  border: 1px solid black;
+  overflow: hidden;
+
   display: grid;
   grid-template-rows: 1fr auto;
   width: 100%;

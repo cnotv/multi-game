@@ -4,6 +4,7 @@ import { useUiStore } from "@/stores/ui";
 import { useUsersStore } from "@/stores/users";
 import { useConnectionStore } from "@/stores/connection";
 import { socket } from "@/socket";
+import Chat from '@/components/Chat.vue'
 
 const uiStore = useUiStore();
 const userStore = useUsersStore();
@@ -34,12 +35,20 @@ userStore.createUser(`User${Math.floor(Math.random() * 1000)}`);
         - Users online: {{ userStore.users.map(user => user.name).join(', ') }} ({{ userStore.users.length }})
       </nav>
       <nav class="layout__header__right">
+        <button @click="uiStore.toggleConfig()">⚙️</button>
         <button @click="uiStore.toggleChat()">💬</button>
       </nav>
     </header>
 
     <main class="layout__main">
       <RouterView />
+      <Chat
+        class="chat-wrap"
+        v-if="uiStore.isChatOpen"
+        :messages="userStore.messages"
+        :user="userStore.user"
+        @new-message="(message) => userStore.sendMessage(message)"
+      />
     </main>
   </div>
 </template>
