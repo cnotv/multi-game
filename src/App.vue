@@ -29,6 +29,7 @@ userStore.createUser(`User${Math.floor(Math.random() * 1000)}`);
         <RouterLink to="/">Chat room</RouterLink>
         <!-- <RouterLink to="/about">About</RouterLink> -->
         {{ connectionStore.isConnected ? 'Connected' : 'Disconnected' }}
+        - Users online: {{ userStore.users.map(user => user.name).join(', ') }} ({{ userStore.users.length }})
       </nav>
     </header>
 
