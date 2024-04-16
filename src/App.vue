@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { RouterLink, RouterView } from 'vue-router'
+import { useUiStore } from "@/stores/ui";
 import { useUsersStore } from "@/stores/users";
 import { useConnectionStore } from "@/stores/connection";
 import { socket } from "@/socket";
 
+const uiStore = useUiStore();
 const userStore = useUsersStore();
 const connectionStore = useConnectionStore();
 
@@ -18,7 +20,7 @@ userStore.createUser(`User${Math.floor(Math.random() * 1000)}`);
 <template>
   <div class="layout">
     <header class="layout__header">
-      <nav class="layout__header__nav">
+      <nav class="layout__header__left">
         <input 
           type="text"
           placeholder="Press enter to type"
@@ -30,6 +32,9 @@ userStore.createUser(`User${Math.floor(Math.random() * 1000)}`);
         <!-- <RouterLink to="/about">About</RouterLink> -->
         {{ connectionStore.isConnected ? 'Connected' : 'Disconnected' }}
         - Users online: {{ userStore.users.map(user => user.name).join(', ') }} ({{ userStore.users.length }})
+      </nav>
+      <nav class="layout__header__right">
+        <button @click="uiStore.toggleChat()">💬</button>
       </nav>
     </header>
 
@@ -49,8 +54,13 @@ userStore.createUser(`User${Math.floor(Math.random() * 1000)}`);
 
   &__header {
     background-color: var(--color-background-soft);
-    padding: 0.5em 1em;
+    padding: 0.5em 0;
     z-index: 1;
+    display: flex;
+
+    &__right {
+      margin-left: auto;
+    }
   }
 
   &__main {

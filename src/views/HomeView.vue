@@ -3,7 +3,9 @@ import { reactive } from 'vue'
 import Chat from '@/components/Chat.vue'
 import Threejs from '@/components/Threejs.vue'
 import { useUsersStore } from "@/stores/users";
+import { useUiStore } from "@/stores/ui";
 
+const uiStore = useUiStore();
 const userStore = useUsersStore();
 </script>
 
@@ -11,6 +13,7 @@ const userStore = useUsersStore();
   <Threejs :users="[userStore.user]" />
   <Chat
     class="chat-wrap"
+    v-if="uiStore.isChatOpen"
     :messages="userStore.messages"
     :user="userStore.user"
     @new-message="(message) => userStore.sendMessage(message)"
