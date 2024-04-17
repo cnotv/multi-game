@@ -14,18 +14,9 @@ export const useUsersStore = defineStore("user", {
   actions: {
     bindEvents() {
       // sync the list of users upon connection
-      socket.on("connect", () => {
-        socket.emit("user:list", () => {
-        });
-      });
+      socket.on("connect", () => {});
 
-      // update the store when an user was created
-      socket.on("user:created", (user: User) => {
-        this.users.push(user);
-      });
-
-      // update the store when an user name changes
-      socket.on("user:changed", (users: User[]) => {
+      socket.on("user:list", (users: User[]) => {
         this.users = users;
       });
 
@@ -42,18 +33,14 @@ export const useUsersStore = defineStore("user", {
       };
       this.user = user;
 
-      socket.emit("user:create", { name }, (res: any) => {
-        user.id = res.data;
-        this.users.push(user);
+      socket.emit("user:create", { name }, (user: User) => {
+        this.user = user;
       });
     },
 
     changeUserName(name: string) {
-      socket.emit("user:change", {
-        name,
-        id: this.user.id,
-      });
       this.user.name = name;
+      socket.emit("user:change", this.user);
     },
 
     sendMessage(message: string) {   
