@@ -1,25 +1,26 @@
 <script setup lang="ts">
 import * as THREE from 'three';
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, onMounted, onUnmounted, watch } from 'vue';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js';
 import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js';
+import { useUsersStore } from "@/stores/users";
+const userStore = useUsersStore();
 
 const isFocused = ref(true)
 const canvas = ref(null)
-const props = defineProps<{
-  users: User[]
-}>()
 
 let velocityY = 0
 const gravity = 0.01
+let scene: THREE.Scene;
+let orbit: OrbitControls;
+let cubes: Record<string, THREE.Mesh<THREE.BoxGeometry, THREE.MeshStandardMaterial, THREE.Object3DEventMap>> = {};
 
 const keyState: Record<string, boolean> = {}
 const keyUp = (event: KeyboardEvent) => (keyState[event.key] = true)
 const keyDown = (event: KeyboardEvent) => (keyState[event.key] = false)
 
 onMounted(() => {
-
   const handleFocusIn = () => (isFocused.value = false)
   const handleFocusOut = () => (isFocused.value = true)
 
@@ -41,29 +42,54 @@ onMounted(() => {
   );
 })
 
-const loadFonts = (meshes: THREE.Mesh<THREE.BoxGeometry, THREE.MeshStandardMaterial, THREE.Object3DEventMap>[]) => {
+watch(() => userStore.users, (newValue) => {
+  const userIds = newValue.map(user => user.id)
+  const cubesIds = Object.keys(cubes)
+  if (userIds.length !== cubesIds.length || userIds.every((id, index) => id === cubesIds[index])) {
+    cubes = setCubes(scene, orbit);
+    loadFonts();
+  }
+  updatePosition();
+})
+
+const loadFonts = () => {
   // Load the font
   const loader = new FontLoader();
   const fontFile = new URL('../assets/Lato_Regular.json', import.meta.url) as unknown as string;
-  loader.load(fontFile, function (font) {
-    // Create a TextGeometry with the user name
-    const geometry = new TextGeometry(props.users[0].name, {
-      font: font,
-      size: 0.2,
-      depth: 0.1,
-    });
 
-    // Add the TextGeometry to the cube
-    const material = new THREE.MeshStandardMaterial({ color: 0xffffff });
-    const text = new THREE.Mesh(geometry, material);
-    // text.position.z = 0.5;
-    text.position.y = 0.7;
-    text.position.x = -0.35;
-    meshes.forEach((mesh) => mesh.add(text));
+  userStore.users.forEach(user => {
+    const cube = cubes[user.id];
+    loader.load(fontFile, function (font) {
+      // Create a TextGeometry with the user name
+      const geometry = new TextGeometry(user.name, {
+        font: font,
+        size: 0.2,
+        depth: 0.1,
+      });
+
+      // Add the TextGeometry to the cube
+      const material = new THREE.MeshStandardMaterial({ color: 0xffffff });
+      const text = new THREE.Mesh(geometry, material);
+      // text.position.z = 0.5;
+      text.position.y = 0.7;
+      text.position.x = -0.35;
+      cube.add(text)
+    });
   });
 }
 
-const loadCubes = (scene: THREE.Scene, orbit: OrbitControls) => {
+const resetCubes = (scene: THREE.Scene) => {
+  for (let i = scene.children.length - 1; i >= 0; i--) {
+    const object = scene.children[i];
+    if (object instanceof THREE.Mesh && object.geometry instanceof THREE.BoxGeometry) {
+      scene.remove(object);
+    }
+  }
+}
+
+const setCubes = (scene: THREE.Scene, orbit: OrbitControls) => {
+  resetCubes(scene)
+
   // Add cubes
   const geometry = new THREE.BoxGeometry( 1, 1, 1 );
   const material = new THREE.MeshStandardMaterial({
@@ -71,18 +97,38 @@ const loadCubes = (scene: THREE.Scene, orbit: OrbitControls) => {
     roughness: 0.2,
     metalness: 0.7,
   });
-  const cubes = props.users.map(() => new THREE.Mesh(geometry, material));
-  orbit.target.copy(cubes[0].position);
 
-  cubes.forEach((cube) => scene.add(cube));
+  const cubes = userStore.users.reduce((acc, user) => {
+    const cube = new THREE.Mesh(geometry, material)
+    scene.add(cube)
+    if (user.position) {
+      cube.position.x = user.position.x;
+      cube.position.y = user.position.y;
+      cube.position.z = user.position.z;
+    }
+
+    return {
+      ...acc,
+      [user.id]: cube
+    };
+  }, {});
+  // orbit.target.copy(cubes[0].position);
 
   return cubes;
 }
 
-const loadEnv = (scene: THREE.Scene) => {
-  const loader = new THREE.TextureLoader();
+const updatePosition = () => {
+  userStore.users.forEach(user => {
+    const cube = cubes[user.id];
+    if (user.position) {
+      cube.position.x = user.position.x;
+      cube.position.y = user.position.y;
+      cube.position.z = user.position.z;
+    }
+  });
+}
 
-  // Create the ground
+const loadGround = (scene: THREE.Scene, loader: THREE.TextureLoader) => {
   const groundGeometry = new THREE.PlaneGeometry(100, 100);
   const groundTexture = loader.load(new URL('../assets/grass.jpg', import.meta.url) as unknown as string);
   const groundMaterial = new THREE.MeshBasicMaterial({ map: groundTexture });
@@ -90,13 +136,21 @@ const loadEnv = (scene: THREE.Scene) => {
   ground.rotation.x = -Math.PI / 2;  // Rotate the ground to make it horizontal
   ground.position.y = -0.5;
   scene.add(ground);
+}
 
-  // Create the sky
+const loadSky = (scene: THREE.Scene, loader: THREE.TextureLoader) => {
   const skyGeometry = new THREE.SphereGeometry(50, 32, 32);
   const skyTexture = loader.load(new URL('../assets/sky.png', import.meta.url) as unknown as string);
   const skyMaterial = new THREE.MeshBasicMaterial({ map: skyTexture, side: THREE.BackSide });
   const sky = new THREE.Mesh(skyGeometry, skyMaterial);
   scene.add(sky);
+}
+
+const loadEnv = (scene: THREE.Scene) => {
+  const loader = new THREE.TextureLoader();
+
+  loadGround(scene, loader);
+  loadSky(scene, loader);
 }
 
 const loadLight = (scene: THREE.Scene) => {
@@ -116,47 +170,53 @@ const loadScene = (canvas: HTMLCanvasElement) => {
   const camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
   camera.position.z = 5;
   camera.position.y = 1;
-  const scene = new THREE.Scene();
-  const orbit = new OrbitControls(camera, renderer.domElement);
+  scene = new THREE.Scene();
+  orbit = new OrbitControls(camera, renderer.domElement);
 
   return { scene, orbit, renderer, camera };
+}
+
+const moveCube = () => {
+  const cube = cubes[userStore.user.id];
+  if (cube) {
+    if (isFocused.value) {
+      if (keyState['ArrowUp'] || keyState['w']) cube.position.z -= 0.1
+      if (keyState['ArrowDown'] || keyState['s']) cube.position.z += 0.1
+      if (keyState['ArrowLeft'] || keyState['a']) cube.position.x -= 0.1
+      if (keyState['ArrowRight'] || keyState['d']) cube.position.x += 0.1
+
+      if (keyState[' ']) {
+        velocityY = 0.1  // Set an upward velocity when the space key is pressed
+      }
+    }
+
+
+    // Apply the velocity and gravity
+    velocityY -= gravity
+    cube.position.y += velocityY
+
+    // Prevent the cube from falling below the ground
+    if (cube.position.y < 0) {
+      cube.position.y = 0
+      velocityY = 0
+    }
+    
+    userStore.updateUserPosition(cube.position);
+  }
 }
  
 const init = (canvas: HTMLCanvasElement) => {
   const setup = () => {
     const { scene, orbit, renderer, camera } = loadScene(canvas);
     loadLight(scene);
-    const cubes = loadCubes(scene, orbit);
-    loadFonts(cubes);
+    cubes = setCubes(scene, orbit);
+    loadFonts();
     loadEnv(scene);
     
     function animate() {
       requestAnimationFrame(animate);
-
-      if (isFocused.value) {
-        if (keyState['ArrowUp'] || keyState['w']) cubes[0].position.z -= 0.1
-        if (keyState['ArrowDown'] || keyState['s']) cubes[0].position.z += 0.1
-        if (keyState['ArrowLeft'] || keyState['a']) cubes[0].position.x -= 0.1
-        if (keyState['ArrowRight'] || keyState['d']) cubes[0].position.x += 0.1
-
-        if (keyState[' ']) {
-          velocityY = 0.1  // Set an upward velocity when the space key is pressed
-        }
-      }
-
-
-      // Apply the velocity and gravity
-      velocityY -= gravity
-      cubes[0].position.y += velocityY
-
-      // Prevent the cube from falling below the ground
-      if (cubes[0].position.y < 0) {
-        cubes[0].position.y = 0
-        velocityY = 0
-      }
-  
+      moveCube();
       orbit.update();
-
       renderer.render( scene, camera );
     }
     animate();

@@ -7,6 +7,11 @@ export const useUsersStore = defineStore("user", {
     user: {
       id: Date.now().toString(),
       name: `Guest + Date.now().toString()`,
+      position: {
+        x: 0,
+        y: 0,
+        z: 0,
+      },
     } as User,
     messages: [] as Message[],
   }),
@@ -29,7 +34,12 @@ export const useUsersStore = defineStore("user", {
     createUser(name: string) {
       const user: User = {
         id: Date.now().toString(), // temporary ID for v-for key
-        name
+        name,
+        position: {
+          x: 0,
+          y: 0,
+          z: 0,
+        }
       };
       this.user = user;
 
@@ -49,6 +59,15 @@ export const useUsersStore = defineStore("user", {
         id: this.user.id,
         text: message,
       });
+    },
+
+    updateUserPosition(position: User['position']) {
+      const currentPos = JSON.stringify(this.user.position)
+      const newPos = JSON.stringify(position)
+      if (currentPos !== newPos) {
+        this.user.position = position;
+        socket.emit("user:change", this.user);
+      }
     },
   },
 });
