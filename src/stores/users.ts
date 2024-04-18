@@ -42,6 +42,10 @@ export const useUsersStore = defineStore("user", {
         }
       };
       this.user = user;
+      // Allow offline without check the other store
+      if (!this.users.length) {
+        this.users = [user];
+      }
 
       socket.emit("user:create", { name }, (user: User) => {
         this.user = user;
@@ -50,6 +54,11 @@ export const useUsersStore = defineStore("user", {
 
     changeUserName(name: string) {
       this.user.name = name;
+
+      // Allow offline without check the other store
+      if (this.users.length === 1) {
+        this.users = [this.user];
+      }
       socket.emit("user:change", this.user);
     },
 
