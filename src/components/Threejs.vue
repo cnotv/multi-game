@@ -16,6 +16,7 @@ let mixer: THREE.AnimationMixer | null = null;
 
 let velocityY = 0
 const gravity = 0.01
+const worldSize = 500;
 let scene: THREE.Scene;
 let orbit: OrbitControls;
 let cubes: Record<string, THREE.Mesh<THREE.BoxGeometry, THREE.MeshStandardMaterial, THREE.Object3DEventMap>> = {};
@@ -32,7 +33,6 @@ onMounted(async() => {
   window.addEventListener('focusout', handleFocusOut)
   window.addEventListener('keydown', keyUp)
   window.addEventListener('keyup', keyDown)
-  // window.addEventListener('keydown', console.log)
 
   onUnmounted(() => {
     window.removeEventListener('focusin', handleFocusIn)
@@ -100,7 +100,7 @@ const loadModel = (): Promise<{ model: THREE.Group<THREE.Object3DEventMap>, gltf
   });
 }
 
-const setCubes = async (scene: THREE.Scene, orbit: OrbitControls) => {
+const setCubes = async (scene: THREE.Scene) => {
   resetCubes(scene)
 
   const cubes = userStore.users.reduce(async(acc, user) => {
@@ -109,7 +109,8 @@ const setCubes = async (scene: THREE.Scene, orbit: OrbitControls) => {
     model.scale.set(0.03, 0.03, 0.03);
     // Create an AnimationMixer and set the first animation to play
     mixer = new THREE.AnimationMixer(model);
-    console.log(gltf.animations)
+    // Flip the model
+    model.rotateOnAxis(new THREE.Vector3(0, 1, 0), Math.PI);
     const action = mixer.clipAction(gltf.animations[0]);
     action.play();
     scene.add(model);
@@ -143,7 +144,7 @@ const updatePosition = () => {
 }
 
 const loadGround = (scene: THREE.Scene, loader: THREE.TextureLoader) => {
-  const groundGeometry = new THREE.PlaneGeometry(100, 100);
+  const groundGeometry = new THREE.PlaneGeometry(worldSize, worldSize);
   const groundTexture = loader.load(new URL('../assets/grass.jpg', import.meta.url) as unknown as string);
   const groundMaterial = new THREE.MeshBasicMaterial({ map: groundTexture });
   const ground = new THREE.Mesh(groundGeometry, groundMaterial);
@@ -153,7 +154,7 @@ const loadGround = (scene: THREE.Scene, loader: THREE.TextureLoader) => {
 }
 
 const loadSky = (scene: THREE.Scene, loader: THREE.TextureLoader) => {
-  const skyGeometry = new THREE.SphereGeometry(50, 32, 32);
+  const skyGeometry = new THREE.SphereGeometry(worldSize, 32, 32);
   const skyTexture = loader.load(new URL('../assets/sky.png', import.meta.url) as unknown as string);
   const skyMaterial = new THREE.MeshBasicMaterial({ map: skyTexture, side: THREE.BackSide });
   const sky = new THREE.Mesh(skyGeometry, skyMaterial);
@@ -190,7 +191,7 @@ const loadScene = (canvas: HTMLCanvasElement) => {
   return { scene, orbit, renderer, camera };
 }
 
-const moveCube = (frame: number) => {
+const moveCube = (frame: number, camera: THREE.PerspectiveCamera, orbit: OrbitControls) => {
   const cube = cubes[userStore.user.id];
   if (cube) {
     if (isFocused.value) {
@@ -213,10 +214,36 @@ const moveCube = (frame: number) => {
           mixer.timeScale = 0;
         }
       } 
-      if (keyState['ArrowUp'] || keyState['w']) cube.position.z -= 0.1
-      if (keyState['ArrowDown'] || keyState['s']) cube.position.z += 0.1
-      if (keyState['ArrowLeft'] || keyState['a']) cube.position.x -= 0.1
-      if (keyState['ArrowRight'] || keyState['d']) cube.position.x += 0.1
+
+      if (keyState['ArrowUp'] || keyState['w']) {
+        // cube.position.z -= 0.1
+          // Calculate the forward vector
+          const forward = new THREE.Vector3();
+          cube.getWorldDirection(forward);
+          forward.multiplyScalar(0.2);
+
+          // Add the forward vector to the cube's position
+          cube.position.add(forward);
+      }
+      if (keyState['ArrowDown'] || keyState['s']) {
+        // cube.position.z += 0.1
+          // Calculate the forward vector
+          const forward = new THREE.Vector3();
+          cube.getWorldDirection(forward);
+          forward.negate();
+          forward.multiplyScalar(0.2);
+
+          // Add the forward vector to the cube's position
+          cube.position.add(forward);
+      }
+      if (keyState['ArrowLeft'] || keyState['a']) {
+        cube.rotateY(0.05)
+        camera.rotateY(0.05)
+      }
+      if (keyState['ArrowRight'] || keyState['d']) {
+        cube.rotateY(-0.05)
+        camera.rotateY(-0.05)
+      }
 
       if (keyState[' ']) {
         velocityY = 0.1  // Set an upward velocity when the space key is pressed
@@ -232,7 +259,15 @@ const moveCube = (frame: number) => {
       cube.position.y = 0
       velocityY = 0
     }
-    
+
+    // Set the camera's position to be a certain offset from the cube's position
+    camera.position.x = cube.position.x;
+    camera.position.y = cube.position.y + 5; // 5 units above the cube
+    camera.position.z = cube.position.z + 10; // 10 units behind the cube
+
+    // Make the camera look at the cube
+    camera.lookAt(cube.position);
+
     userStore.updateUserPosition(cube.position);
   }
 }
@@ -241,13 +276,13 @@ const init = async(canvas: HTMLCanvasElement) => {
   const setup = async () => {
     const { scene, orbit, renderer, camera } = loadScene(canvas);
     loadLight(scene);
-    cubes = await setCubes(scene, orbit);
+    cubes = await setCubes(scene);
     // loadFonts();
     loadEnv(scene);
     
     function animate() {
       const frame = requestAnimationFrame(animate);
-      moveCube(frame);
+      moveCube(frame, camera, orbit);
       orbit.update();
       renderer.render( scene, camera );
     }
