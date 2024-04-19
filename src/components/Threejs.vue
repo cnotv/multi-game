@@ -5,10 +5,14 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js';
 import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js';
 import { useUsersStore } from "@/stores/users";
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
 const userStore = useUsersStore();
 
 const isFocused = ref(true)
 const canvas = ref(null)
+
+let mixer: THREE.AnimationMixer | null = null;
 
 let velocityY = 0
 const gravity = 0.01
@@ -20,7 +24,7 @@ const keyState: Record<string, boolean> = {}
 const keyUp = (event: KeyboardEvent) => (keyState[event.key] = true)
 const keyDown = (event: KeyboardEvent) => (keyState[event.key] = false)
 
-onMounted(() => {
+onMounted(async() => {
   const handleFocusIn = () => (isFocused.value = false)
   const handleFocusOut = () => (isFocused.value = true)
 
@@ -37,17 +41,17 @@ onMounted(() => {
     window.removeEventListener('keyup', keyDown)
   })
 
-  init(
+  await init(
     canvas.value as unknown as HTMLCanvasElement,
   );
 })
 
-watch(() => userStore.users, (newValue) => {
+watch(() => userStore.users, async(newValue) => {
   const userIds = newValue.map(user => user.id)
   const cubesIds = Object.keys(cubes)
   if (userIds.length !== cubesIds.length || userIds.every((id, index) => id === cubesIds[index])) {
-    cubes = setCubes(scene, orbit);
-    loadFonts();
+    cubes = await setCubes(scene, orbit);
+    // loadFonts();
   }
   updatePosition();
 })
@@ -87,32 +91,42 @@ const resetCubes = (scene: THREE.Scene) => {
   }
 }
 
-const setCubes = (scene: THREE.Scene, orbit: OrbitControls) => {
+const loadModel = (): Promise<{ model: THREE.Group<THREE.Object3DEventMap>, gltf: any}> => {
+  return new Promise((resolve, reject) => {
+    const loader = new GLTFLoader();
+    loader.load('public/goomba.glb', (gltf) => {
+      resolve({model: gltf.scene, gltf});
+    }, undefined, reject);
+  });
+}
+
+const setCubes = async (scene: THREE.Scene, orbit: OrbitControls) => {
   resetCubes(scene)
 
-  // Add cubes
-  const geometry = new THREE.BoxGeometry( 1, 1, 1 );
-  const material = new THREE.MeshStandardMaterial({
-    color: new THREE.Color(0x3268F8),
-    roughness: 0.2,
-    metalness: 0.7,
-  });
+  const cubes = userStore.users.reduce(async(acc, user) => {
+    // Load the model
+    const {model, gltf} = await loadModel();
+    model.scale.set(0.03, 0.03, 0.03);
+    // Create an AnimationMixer and set the first animation to play
+    mixer = new THREE.AnimationMixer(model);
+    console.log(gltf.animations)
+    const action = mixer.clipAction(gltf.animations[0]);
+    action.play();
+    scene.add(model);
 
-  const cubes = userStore.users.reduce((acc, user) => {
-    const cube = new THREE.Mesh(geometry, material)
-    scene.add(cube)
+    mixer.timeScale = 0;
+
     if (user.position) {
-      cube.position.x = user.position.x;
-      cube.position.y = user.position.y;
-      cube.position.z = user.position.z;
+      model.position.x = user.position.x;
+      model.position.y = user.position.y;
+      model.position.z = user.position.z;
     }
 
     return {
       ...acc,
-      [user.id]: cube
+      [user.id]: model
     };
   }, {});
-  // orbit.target.copy(cubes[0].position);
 
   return cubes;
 }
@@ -176,10 +190,29 @@ const loadScene = (canvas: HTMLCanvasElement) => {
   return { scene, orbit, renderer, camera };
 }
 
-const moveCube = () => {
+const moveCube = (frame: number) => {
   const cube = cubes[userStore.user.id];
   if (cube) {
     if (isFocused.value) {
+      if (mixer) {
+        if ([
+          'ArrowUp',
+          'w',
+          'ArrowDown',
+          's',
+          'ArrowLeft',
+          'a',
+          'ArrowRight',
+          'd',
+        ].some(key => keyState[key])) {
+          mixer.timeScale = 1;
+          if (frame % 6 === 0) {
+            mixer.update(frame / 2);
+          }
+        } else {
+          mixer.timeScale = 0;
+        }
+      } 
       if (keyState['ArrowUp'] || keyState['w']) cube.position.z -= 0.1
       if (keyState['ArrowDown'] || keyState['s']) cube.position.z += 0.1
       if (keyState['ArrowLeft'] || keyState['a']) cube.position.x -= 0.1
@@ -189,7 +222,6 @@ const moveCube = () => {
         velocityY = 0.1  // Set an upward velocity when the space key is pressed
       }
     }
-
 
     // Apply the velocity and gravity
     velocityY -= gravity
@@ -205,17 +237,17 @@ const moveCube = () => {
   }
 }
  
-const init = (canvas: HTMLCanvasElement) => {
-  const setup = () => {
+const init = async(canvas: HTMLCanvasElement) => {
+  const setup = async () => {
     const { scene, orbit, renderer, camera } = loadScene(canvas);
     loadLight(scene);
-    cubes = setCubes(scene, orbit);
-    loadFonts();
+    cubes = await setCubes(scene, orbit);
+    // loadFonts();
     loadEnv(scene);
     
     function animate() {
-      requestAnimationFrame(animate);
-      moveCube();
+      const frame = requestAnimationFrame(animate);
+      moveCube(frame);
       orbit.update();
       renderer.render( scene, camera );
     }
