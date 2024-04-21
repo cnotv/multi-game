@@ -4,6 +4,7 @@ export const useUiStore = defineStore("ui", {
   state: () => ({
     isChatOpen: true,
     isConfigOpen: false,
+    isUserListOpen: false,
   }),
 
   actions: {
@@ -12,6 +13,9 @@ export const useUiStore = defineStore("ui", {
     },
     toggleConfig() {
       this.isConfigOpen = !this.isConfigOpen;
+    },
+    toggleUserList() {
+      this.isUserListOpen = !this.isUserListOpen;
     }
   },
 });
