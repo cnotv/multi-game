@@ -13,8 +13,8 @@ interface User {
     z: number;
   };
   rotation: {
-    x: number;
-    y: number;
-    z: number;
+    _x: number;
+    _y: number;
+    _z: number;
   }
 }

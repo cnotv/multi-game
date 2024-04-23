@@ -156,15 +156,11 @@ const setCubes = async (scene: THREE.Scene) => {
  */
 const updatePosition = (cube: Model, user: User) => {
   if (user.position && cube.position) {
-    cube.position.setX(user.position.x);
-    cube.position.setY(user.position.y);
-    cube.position.setZ(user.position.z);
+    cube.position.set(user.position.x, user.position.y, user.position.z);
   }
-  // if (user.rotation && cube.rotation) {
-  //   cube.rotateX(user.rotation.x);
-  //   cube.rotateY(user.rotation.y);
-  //   cube.rotateZ(user.rotation.z);
-  // }
+  if (user.rotation && cube.rotation) {
+    cube.rotation.set(user.rotation._x, user.rotation._y, user.rotation._z);
+  }
 }
 
 /**
@@ -182,6 +178,7 @@ const movePlayer = (player: Model, frame: number, camera: THREE.PerspectiveCamer
         'a',
         'ArrowRight',
         'd',
+        ' ',
       ].some(key => keyState[key])) {
         mixer.timeScale = 1;
         if (frame % 6 === 0) {
