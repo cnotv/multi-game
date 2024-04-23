@@ -7,6 +7,8 @@ import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js';
 import { useUsersStore } from "@/stores/users";
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
+type Model = THREE.Group<THREE.Object3DEventMap>
+
 const userStore = useUsersStore();
 
 const isFocused = ref(true)
@@ -19,7 +21,7 @@ const gravity = 0.01
 const worldSize = 500;
 let scene: THREE.Scene;
 let orbit: OrbitControls;
-let cubes: Record<string, THREE.Mesh<THREE.BoxGeometry, THREE.MeshStandardMaterial, THREE.Object3DEventMap>> = {};
+let cubes: Record<string, Model> = {};
 
 const keyState: Record<string, boolean> = {}
 const keyUp = (event: KeyboardEvent) => (keyState[event.key] = true)
@@ -46,23 +48,30 @@ onMounted(async() => {
   );
 })
 
-watch(() => userStore.users, async(newValue) => {
+watch(() => userStore.users, async (newValue) => {
   const userIds = newValue.map(user => user.id)
   const cubesIds = Object.keys(cubes)
   if (userIds.length !== cubesIds.length || userIds.every((id, index) => id === cubesIds[index])) {
-    cubes = await setCubes(scene, orbit);
-    // loadFonts();
+    userStore.users.forEach(user => {
+      const cube = cubes[user.id];
+      if (!cube) {
+        setModel(user).then(cube => {
+          cubes[user.id] = cube;
+        });
+      }
+    });
   }
-  updatePosition();
 })
 
-const loadFonts = () => {
+/**
+ * Add fonts on top of the cube
+ */
+const loadFonts = (cube: Model) => {
   // Load the font
   const loader = new FontLoader();
   const fontFile = new URL('../assets/Lato_Regular.json', import.meta.url) as unknown as string;
 
   userStore.users.forEach(user => {
-    const cube = cubes[user.id];
     loader.load(fontFile, function (font) {
       // Create a TextGeometry with the user name
       const geometry = new TextGeometry(user.name, {
@@ -82,65 +91,160 @@ const loadFonts = () => {
   });
 }
 
-const resetCubes = (scene: THREE.Scene) => {
+/**
+ * Remove all the models types from the scene
+ */
+const resetModels = (scene: THREE.Scene) => {
   for (let i = scene.children.length - 1; i >= 0; i--) {
     const object = scene.children[i];
-    if (object instanceof THREE.Mesh && object.geometry instanceof THREE.BoxGeometry) {
+    if (object instanceof THREE.Group && object.isObject3D) {
       scene.remove(object);
     }
   }
 }
 
-const loadModel = (): Promise<{ model: THREE.Group<THREE.Object3DEventMap>, gltf: any}> => {
+/**
+ * Return threeJS valid 3D model
+ */
+const loadModel = (): Promise<{ model: Model, gltf: any}> => {
   return new Promise((resolve, reject) => {
     const loader = new GLTFLoader();
-    loader.load('public/goomba.glb', (gltf) => {
+    loader.load('goomba.glb', (gltf) => {
       resolve({model: gltf.scene, gltf});
     }, undefined, reject);
   });
 }
 
+const animateModel = (model: Model, gltf: any) => {
+  // Create an AnimationMixer and set the first animation to play
+  mixer = new THREE.AnimationMixer(model);
+  // Flip the model
+  model.rotateOnAxis(new THREE.Vector3(0, 1, 0), Math.PI);
+  const action = mixer.clipAction(gltf.animations[0]);
+  action.play();
+  mixer.timeScale = 0;
+}
+
+/**
+ * Generate model with predefined information (e.g. position) and add it to the scene
+ */
+const setModel = async (user: User) => {
+  // Load the model
+  const {model, gltf} = await loadModel();
+  model.scale.set(0.03, 0.03, 0.03);
+  animateModel(model, gltf);
+  // updatePosition(model, user)
+  scene.add(model);
+
+  return model;
+}
+
+/**
+ * Generate all the models for the users and add them to the scene
+ */
 const setCubes = async (scene: THREE.Scene) => {
-  resetCubes(scene)
-
-  const cubes = userStore.users.reduce(async(acc, user) => {
-    // Load the model
-    const {model, gltf} = await loadModel();
-    model.scale.set(0.03, 0.03, 0.03);
-    // Create an AnimationMixer and set the first animation to play
-    mixer = new THREE.AnimationMixer(model);
-    // Flip the model
-    model.rotateOnAxis(new THREE.Vector3(0, 1, 0), Math.PI);
-    const action = mixer.clipAction(gltf.animations[0]);
-    action.play();
-    scene.add(model);
-
-    mixer.timeScale = 0;
-
-    if (user.position) {
-      model.position.x = user.position.x;
-      model.position.y = user.position.y;
-      model.position.z = user.position.z;
-    }
-
-    return {
-      ...acc,
-      [user.id]: model
-    };
-  }, {});
+  const cubes = userStore.users.reduce(async (acc, user) => ({
+    ...acc,
+    [user.id]: setModel(user)
+  }), {});
 
   return cubes;
 }
 
-const updatePosition = () => {
-  userStore.users.forEach(user => {
-    const cube = cubes[user.id];
-    if (user.position) {
-      cube.position.x = user.position.x;
-      cube.position.y = user.position.y;
-      cube.position.z = user.position.z;
+/**
+ * Update the position of the cube
+ */
+const updatePosition = (cube: Model, user: User) => {
+  if (user.position && cube.position) {
+    cube.position.setX(user.position.x);
+    cube.position.setY(user.position.y);
+    cube.position.setZ(user.position.z);
+  }
+  // if (user.rotation && cube.rotation) {
+  //   cube.rotateX(user.rotation.x);
+  //   cube.rotateY(user.rotation.y);
+  //   cube.rotateZ(user.rotation.z);
+  // }
+}
+
+/**
+ * Move the player and emit new scene information
+ */
+const movePlayer = (player: Model, frame: number, camera: THREE.PerspectiveCamera, orbit: OrbitControls) => {
+  if (isFocused.value) {
+    if (mixer) {
+      if ([
+        'ArrowUp',
+        'w',
+        'ArrowDown',
+        's',
+        'ArrowLeft',
+        'a',
+        'ArrowRight',
+        'd',
+      ].some(key => keyState[key])) {
+        mixer.timeScale = 1;
+        if (frame % 6 === 0) {
+          mixer.update(frame / 2);
+        }
+        userStore.updateUserPosition({ position: player.position, rotation: player.rotation });
+      } else {
+        mixer.timeScale = 0;
+      }
+    } 
+
+    if (keyState['ArrowUp'] || keyState['w']) {
+      // player.position.z -= 0.1
+        // Calculate the forward vector
+        const forward = new THREE.Vector3();
+        player.getWorldDirection(forward);
+        forward.multiplyScalar(0.1);
+
+        // Add the forward vector to the player's position
+        player.position.add(forward);
     }
-  });
+    if (keyState['ArrowDown'] || keyState['s']) {
+      // player.position.z += 0.1
+      // Calculate the forward vector
+      const forward = new THREE.Vector3();
+      player.getWorldDirection(forward);
+      forward.negate();
+      forward.multiplyScalar(0.1);
+
+      // Add the forward vector to the player's position
+      player.position.add(forward);
+    }
+    if (keyState['ArrowLeft'] || keyState['a']) {
+      player.rotateY(0.05)
+      camera.rotateY(0.05)
+    }
+    if (keyState['ArrowRight'] || keyState['d']) {
+      player.rotateY(-0.05)
+      camera.rotateY(-0.05)
+    }
+
+    if (keyState[' ']) {
+      velocityY = 0.1  // Set an upward velocity when the space key is pressed
+    }
+  }
+
+  // Apply the velocity and gravity
+  velocityY -= gravity
+  player.position.y += velocityY
+
+  // Prevent the player from falling below the ground
+  if (player.position.y < 0) {
+    player.position.y = 0
+    velocityY = 0
+  }
+
+  // Set the camera's position to be a certain offset from the player's position
+  camera.position.x = player.position.x;
+  camera.position.y = player.position.y + 5; // 5 units above the player
+  camera.position.z = player.position.z + 10; // 10 units behind the player
+
+  // Make the camera look at the player
+  camera.lookAt(player.position);
 }
 
 const loadGround = (scene: THREE.Scene, loader: THREE.TextureLoader) => {
@@ -163,7 +267,6 @@ const loadSky = (scene: THREE.Scene, loader: THREE.TextureLoader) => {
 
 const loadEnv = (scene: THREE.Scene) => {
   const loader = new THREE.TextureLoader();
-
   loadGround(scene, loader);
   loadSky(scene, loader);
 }
@@ -172,11 +275,13 @@ const loadLight = (scene: THREE.Scene) => {
   const light = new THREE.PointLight(0xffffff, 50);  // Increase the intensity
   light.position.set(4, 4, 4);  // Adjust the position
   scene.add(light);
-
   const ambientLight = new THREE.AmbientLight(0xffffff, 2);  // Add an ambient light
   scene.add(ambientLight);
 }
 
+/**
+ * Initialize ThreeJS scene and return used tools
+ */
 const loadScene = (canvas: HTMLCanvasElement) => {
   // Scene setup
   const renderer = new THREE.WebGLRenderer({ canvas: canvas });
@@ -190,99 +295,26 @@ const loadScene = (canvas: HTMLCanvasElement) => {
 
   return { scene, orbit, renderer, camera };
 }
-
-const moveCube = (frame: number, camera: THREE.PerspectiveCamera, orbit: OrbitControls) => {
-  const cube = cubes[userStore.user.id];
-  if (cube) {
-    if (isFocused.value) {
-      if (mixer) {
-        if ([
-          'ArrowUp',
-          'w',
-          'ArrowDown',
-          's',
-          'ArrowLeft',
-          'a',
-          'ArrowRight',
-          'd',
-        ].some(key => keyState[key])) {
-          mixer.timeScale = 1;
-          if (frame % 6 === 0) {
-            mixer.update(frame / 2);
-          }
-        } else {
-          mixer.timeScale = 0;
-        }
-      } 
-
-      if (keyState['ArrowUp'] || keyState['w']) {
-        // cube.position.z -= 0.1
-          // Calculate the forward vector
-          const forward = new THREE.Vector3();
-          cube.getWorldDirection(forward);
-          forward.multiplyScalar(0.2);
-
-          // Add the forward vector to the cube's position
-          cube.position.add(forward);
-      }
-      if (keyState['ArrowDown'] || keyState['s']) {
-        // cube.position.z += 0.1
-          // Calculate the forward vector
-          const forward = new THREE.Vector3();
-          cube.getWorldDirection(forward);
-          forward.negate();
-          forward.multiplyScalar(0.2);
-
-          // Add the forward vector to the cube's position
-          cube.position.add(forward);
-      }
-      if (keyState['ArrowLeft'] || keyState['a']) {
-        cube.rotateY(0.05)
-        camera.rotateY(0.05)
-      }
-      if (keyState['ArrowRight'] || keyState['d']) {
-        cube.rotateY(-0.05)
-        camera.rotateY(-0.05)
-      }
-
-      if (keyState[' ']) {
-        velocityY = 0.1  // Set an upward velocity when the space key is pressed
-      }
-    }
-
-    // Apply the velocity and gravity
-    velocityY -= gravity
-    cube.position.y += velocityY
-
-    // Prevent the cube from falling below the ground
-    if (cube.position.y < 0) {
-      cube.position.y = 0
-      velocityY = 0
-    }
-
-    // Set the camera's position to be a certain offset from the cube's position
-    camera.position.x = cube.position.x;
-    camera.position.y = cube.position.y + 5; // 5 units above the cube
-    camera.position.z = cube.position.z + 10; // 10 units behind the cube
-
-    // Make the camera look at the cube
-    camera.lookAt(cube.position);
-
-    userStore.updateUserPosition(cube.position);
-  }
-}
  
 const init = async(canvas: HTMLCanvasElement) => {
   const setup = async () => {
     const { scene, orbit, renderer, camera } = loadScene(canvas);
     loadLight(scene);
+    resetModels(scene)
     cubes = await setCubes(scene);
+    const player = await setModel(userStore.user);
     // loadFonts();
     loadEnv(scene);
     
     function animate() {
       const frame = requestAnimationFrame(animate);
-      moveCube(frame, camera, orbit);
+      Object.entries(cubes).forEach(([id, cube]) => {
+        const user = userStore.users.find(user => user.id === id);
+        if (cube && user) {
+          updatePosition(cube, user);
+        }
+      });
+      movePlayer(player, frame, camera, orbit);
       orbit.update();
       renderer.render( scene, camera );
     }
@@ -295,4 +327,3 @@ const init = async(canvas: HTMLCanvasElement) => {
 <template>
   <canvas ref="canvas"></canvas>
 </template>
-

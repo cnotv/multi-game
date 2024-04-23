@@ -1,28 +1,39 @@
 import { defineStore } from "pinia";
 import { socket } from "@/socket";
 
+const defaultUser = () => ({
+  id: Date.now().toString(),
+  name: `Guest${Math.floor(Math.random() * 1000)}`,
+  position: {
+    x: 0,
+    y: 0,
+    z: 0,
+  },
+  rotation: {
+    x: 0,
+    y: 0,
+    z: 0,
+  }
+}) as User;
+
 export const useUsersStore = defineStore("user", {
   state: () => ({
     users: [] as User[],
-    user: {
-      id: Date.now().toString(),
-      name: `Guest + Date.now().toString()`,
-      position: {
-        x: 0,
-        y: 0,
-        z: 0,
-      },
-    } as User,
+    user: defaultUser(),
     messages: [] as Message[],
   }),
 
   actions: {
     bindEvents() {
       // sync the list of users upon connection
-      socket.on("connect", () => {});
+      socket.on("connect", () => {
+        this.createUser(`Guest${Math.floor(Math.random() * 1000)}`);
+      });
 
-      socket.on("user:list", (users: User[]) => {
-        this.users = users;
+      socket.on("user:list", ({users, id}: {users: User[], id: string}) => {
+        if (id !== this.user.id) {
+          this.users = users.filter((user) => user.id !== this.user.id);
+        }
       });
 
       // update the store when a message is received
@@ -33,32 +44,17 @@ export const useUsersStore = defineStore("user", {
 
     createUser(name: string) {
       const user: User = {
-        id: Date.now().toString(), // temporary ID for v-for key
+        ...defaultUser(),
         name,
-        position: {
-          x: 0,
-          y: 0,
-          z: 0,
-        }
       };
       this.user = user;
-      // Allow offline without check the other store
-      if (!this.users.length) {
-        this.users = [user];
-      }
-
-      socket.emit("user:create", { name }, (user: User) => {
-        this.user = user;
+      socket.emit("user:create", user, (newUser: User) => {
+        this.user = newUser;
       });
     },
 
     changeUserName(name: string) {
       this.user.name = name;
-
-      // Allow offline without check the other store
-      if (this.users.length === 1) {
-        this.users = [this.user];
-      }
       socket.emit("user:change", this.user);
     },
 
@@ -70,13 +66,10 @@ export const useUsersStore = defineStore("user", {
       });
     },
 
-    updateUserPosition(position: User['position']) {
-      const currentPos = JSON.stringify(this.user.position)
-      const newPos = JSON.stringify(position)
-      if (currentPos !== newPos) {
-        this.user.position = position;
-        socket.emit("user:change", this.user);
-      }
+    updateUserPosition({position, rotation}: {position: User['position'], rotation: User['rotation']}) {
+      this.user.position = position;
+      this.user.rotation = rotation;
+      socket.emit("user:change", this.user);
     },
   },
 });

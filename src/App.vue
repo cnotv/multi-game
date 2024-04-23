@@ -15,7 +15,6 @@ socket.off();
 
 userStore.bindEvents();
 connectionStore.bindEvents();
-userStore.createUser(`User${Math.floor(Math.random() * 1000)}`);
 </script>
 
 <template>
