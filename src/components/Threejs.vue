@@ -8,20 +8,21 @@ import { useUsersStore } from "@/stores/users";
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 type Model = THREE.Group<THREE.Object3DEventMap>
+type UserModel = { model: Model, mixer: THREE.AnimationMixer }
 
 const userStore = useUsersStore();
 
 const isFocused = ref(true)
 const canvas = ref(null)
 
-let mixer: THREE.AnimationMixer | null = null;
-
 let velocityY = 0
 const gravity = 0.01
 const worldSize = 500;
 let scene: THREE.Scene;
 let orbit: OrbitControls;
-let cubes: Record<string, Model> = {};
+let players: Record<string, UserModel> = {};
+let player: UserModel | null = null;
+let frame: number = 0;
 
 const keyState: Record<string, boolean> = {}
 const keyUp = (event: KeyboardEvent) => (keyState[event.key] = true)
@@ -50,14 +51,19 @@ onMounted(async() => {
 
 watch(() => userStore.users, async (newValue) => {
   const userIds = newValue.map(user => user.id)
-  const cubesIds = Object.keys(cubes)
-  if (userIds.length !== cubesIds.length || userIds.every((id, index) => id === cubesIds[index])) {
-    userStore.users.forEach(user => {
-      const cube = cubes[user.id];
+  const playersIds = Object.keys(players)
+  if (userIds.length !== playersIds.length || userIds.every((id, index) => id === playersIds[index])) {
+    userStore.users.forEach(async(user) => {
+      const cube = players[user.id];
       if (!cube) {
-        setModel(user).then(cube => {
-          cubes[user.id] = cube;
+        resetModels(scene)
+        setModel().then(cube => {
+          players[user.id] = cube;
         });
+        // TODO: Avoid to create a new player and remove models by ID
+        player = await setModel();
+      } else {
+        updatePosition(cube, user, frame);
       }
     });
   }
@@ -115,9 +121,22 @@ const loadModel = (): Promise<{ model: Model, gltf: any}> => {
   });
 }
 
-const animateModel = (model: Model, gltf: any) => {
-  // Create an AnimationMixer and set the first animation to play
-  mixer = new THREE.AnimationMixer(model);
+const playAnimationModel = (mixer: THREE.AnimationMixer, frame: number) => {
+  if (mixer) {
+    mixer.timeScale = 1;
+    if (frame % 6 === 0) {
+      mixer.update(frame / 2);
+    }
+  }
+} 
+
+const resetAnimationModel = (mixer: THREE.AnimationMixer) => {
+  if (mixer) {
+    mixer.timeScale = 0;
+  } 
+} 
+
+const setAnimationModel = (mixer: THREE.AnimationMixer, model: Model, gltf: any) => {
   // Flip the model
   model.rotateOnAxis(new THREE.Vector3(0, 1, 0), Math.PI);
   const action = mixer.clipAction(gltf.animations[0]);
@@ -128,45 +147,57 @@ const animateModel = (model: Model, gltf: any) => {
 /**
  * Generate model with predefined information (e.g. position) and add it to the scene
  */
-const setModel = async (user: User) => {
+const setModel = async (): Promise<UserModel> => {
   // Load the model
   const {model, gltf} = await loadModel();
+  // Create an AnimationMixer and set the first animation to play
+  const mixer = new THREE.AnimationMixer(model)
   model.scale.set(0.03, 0.03, 0.03);
-  animateModel(model, gltf);
-  // updatePosition(model, user)
+  setAnimationModel(mixer, model, gltf);
   scene.add(model);
 
-  return model;
+  return {model, mixer};
 }
 
 /**
  * Generate all the models for the users and add them to the scene
  */
-const setCubes = async (scene: THREE.Scene) => {
-  const cubes = userStore.users.reduce(async (acc, user) => ({
+const setPlayers = async (scene: THREE.Scene): Promise<Record<string, UserModel>> => {
+  const players = userStore.users.reduce(async (acc, user) => ({
     ...acc,
-    [user.id]: setModel(user)
+    [user.id]: setModel()
   }), {});
 
-  return cubes;
+  return players;
 }
 
 /**
  * Update the position of the cube
  */
-const updatePosition = (cube: Model, user: User) => {
-  if (user.position && cube.position) {
-    cube.position.set(user.position.x, user.position.y, user.position.z);
+const updatePosition = (cube: UserModel, user: User, frame: number) => {
+  const { model, mixer } = cube;
+  if (model) {
+    if (user.position && model.position) {
+      model.position.set(user.position.x, user.position.y, user.position.z);
+    }
+    if (user.rotation && model.rotation) {
+      model.rotation.set(user.rotation._x, user.rotation._y, user.rotation._z);
+    } 
   }
-  if (user.rotation && cube.rotation) {
-    cube.rotation.set(user.rotation._x, user.rotation._y, user.rotation._z);
-  }
+  // const oldMovement = JSON.stringify(user.position) + JSON.stringify(user.rotation);
+  // const newMovement = JSON.stringify(model.position) + JSON.stringify(model.rotation);
+  // if (oldMovement !== newMovement) {
+    playAnimationModel(mixer, frame);
+  // } else {
+    // resetAnimationModel(mixer);
+  // }
 }
 
 /**
  * Move the player and emit new scene information
  */
-const movePlayer = (player: Model, frame: number, camera: THREE.PerspectiveCamera, orbit: OrbitControls) => {
+const movePlayer = (player: UserModel, frame: number, camera: THREE.PerspectiveCamera, orbit: OrbitControls) => {
+  const { model, mixer } = player;
   if (isFocused.value) {
     if (mixer) {
       if ([
@@ -180,43 +211,41 @@ const movePlayer = (player: Model, frame: number, camera: THREE.PerspectiveCamer
         'd',
         ' ',
       ].some(key => keyState[key])) {
-        mixer.timeScale = 1;
-        if (frame % 6 === 0) {
-          mixer.update(frame / 2);
-        }
-        userStore.updateUserPosition({ position: player.position, rotation: player.rotation });
+        playAnimationModel(mixer, frame)
+        // For some reason the rotation is reported as Euler type but it's not
+        userStore.updateUserPosition({ position: model.position, rotation: model.rotation as unknown as UserRotation });
       } else {
-        mixer.timeScale = 0;
+        resetAnimationModel(mixer)
       }
     } 
 
     if (keyState['ArrowUp'] || keyState['w']) {
-      // player.position.z -= 0.1
+      // model.position.z -= 0.1
         // Calculate the forward vector
         const forward = new THREE.Vector3();
-        player.getWorldDirection(forward);
+        model.getWorldDirection(forward);
         forward.multiplyScalar(0.1);
 
-        // Add the forward vector to the player's position
-        player.position.add(forward);
+        // Add the forward vector to the model's position
+        model.position.add(forward);
     }
     if (keyState['ArrowDown'] || keyState['s']) {
-      // player.position.z += 0.1
+      // model.position.z += 0.1
       // Calculate the forward vector
       const forward = new THREE.Vector3();
-      player.getWorldDirection(forward);
+      model.getWorldDirection(forward);
       forward.negate();
       forward.multiplyScalar(0.1);
 
-      // Add the forward vector to the player's position
-      player.position.add(forward);
+      // Add the forward vector to the model's position
+      model.position.add(forward);
     }
     if (keyState['ArrowLeft'] || keyState['a']) {
-      player.rotateY(0.05)
+      model.rotateY(0.05)
       camera.rotateY(0.05)
     }
     if (keyState['ArrowRight'] || keyState['d']) {
-      player.rotateY(-0.05)
+      model.rotateY(-0.05)
       camera.rotateY(-0.05)
     }
 
@@ -227,21 +256,21 @@ const movePlayer = (player: Model, frame: number, camera: THREE.PerspectiveCamer
 
   // Apply the velocity and gravity
   velocityY -= gravity
-  player.position.y += velocityY
+  model.position.y += velocityY
 
-  // Prevent the player from falling below the ground
-  if (player.position.y < 0) {
-    player.position.y = 0
+  // Prevent the model from falling below the ground
+  if (model.position.y < 0) {
+    model.position.y = 0
     velocityY = 0
   }
 
-  // Set the camera's position to be a certain offset from the player's position
-  camera.position.x = player.position.x;
-  camera.position.y = player.position.y + 5; // 5 units above the player
-  camera.position.z = player.position.z + 10; // 10 units behind the player
+  // Set the camera's position to be a certain offset from the model's position
+  camera.position.x = model.position.x;
+  camera.position.y = model.position.y + 5; // 5 units above the model
+  camera.position.z = model.position.z + 10; // 10 units behind the model
 
-  // Make the camera look at the player
-  camera.lookAt(player.position);
+  // Make the camera look at the model
+  camera.lookAt(model.position);
 }
 
 const loadGround = (scene: THREE.Scene, loader: THREE.TextureLoader) => {
@@ -298,20 +327,22 @@ const init = async(canvas: HTMLCanvasElement) => {
     const { scene, orbit, renderer, camera } = loadScene(canvas);
     loadLight(scene);
     resetModels(scene)
-    cubes = await setCubes(scene);
-    const player = await setModel(userStore.user);
+    players = await setPlayers(scene);
+    player = await setModel();
     // loadFonts();
     loadEnv(scene);
     
     function animate() {
-      const frame = requestAnimationFrame(animate);
-      Object.entries(cubes).forEach(([id, cube]) => {
-        const user = userStore.users.find(user => user.id === id);
-        if (cube && user) {
-          updatePosition(cube, user);
-        }
-      });
-      movePlayer(player, frame, camera, orbit);
+      frame = requestAnimationFrame(animate);
+      // Object.entries(players).forEach(([id, cube]) => {
+      //   const user = userStore.users.find(user => user.id === id);
+      //   if (cube && user) {
+      //     updatePosition(cube, user, frame);
+      //   }
+      // });
+      if (player) {
+        movePlayer(player, frame, camera, orbit);
+      }
       orbit.update();
       renderer.render( scene, camera );
     }
