@@ -8,11 +8,6 @@ const usersStore = useUsersStore();
 
 <template>
   <div class="ui">
-    <div class="ui-user">
-      User:
-      {{ usersStore.user.name }}
-      {{ usersStore.user.id }}
-    </div>
     <div 
       class="ui-users"
       v-if="uiStore.isUserListOpen"
@@ -24,6 +19,7 @@ const usersStore = useUsersStore();
       >
         {{ user.name }}
         {{ user.id }}
+        {{ user.rotation }}
       </div>
     </div>
   </div>

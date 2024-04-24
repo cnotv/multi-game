@@ -2,7 +2,7 @@ import { defineStore } from "pinia";
 
 export const useUiStore = defineStore("ui", {
   state: () => ({
-    isChatOpen: true,
+    isChatOpen: false,
     isConfigOpen: false,
     isUserListOpen: false,
   }),

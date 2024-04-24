@@ -6,6 +6,7 @@ import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js';
 import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js';
 import { useUsersStore } from "@/stores/users";
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import Controls from '@/components/Controls.vue'
 
 type Model = THREE.Group<THREE.Object3DEventMap>
 type UserModel = { model: Model, mixer: THREE.AnimationMixer }
@@ -21,9 +22,7 @@ let player: UserModel | null = null;
 let frame: number = 0;
 
 const config = {
-  velocity: {
-    y: 0,
-  },
+  velocityY: 0,
   gravity: 0.01,
   worldSize: 500,
 }
@@ -254,18 +253,18 @@ const movePlayer = (player: UserModel, frame: number, camera: THREE.PerspectiveC
     }
 
     if (keyState[' ']) {
-      config.velocity.y = 0.1  // Set an upward velocity when the space key is pressed
+      config.velocityY = 0.1  // Set an upward velocity when the space key is pressed
     }
   }
 
   // Apply the velocity and gravity
-  config.velocity.y -= config.gravity
-  model.position.y += config.velocity.y
+  config.velocityY -= config.gravity
+  model.position.y += config.velocityY
 
   // Prevent the model from falling below the ground
   if (model.position.y < 0) {
     model.position.y = 0
-    config.velocity.y = 0
+    config.velocityY = 0
   }
 
   // Set the camera's position to be a certain offset from the model's position
@@ -357,5 +356,6 @@ const init = async(canvas: HTMLCanvasElement) => {
 </script>
 
 <template>
+  <Controls :config="config" @update="config => config" />
   <canvas ref="canvas"></canvas>
 </template>

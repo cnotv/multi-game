@@ -1,16 +1,42 @@
 <script setup lang="ts">
-import { watch } from 'vue';
+import { watch, onUnmounted } from 'vue';
 import * as dat from "dat.gui";
 import { useUiStore } from "@/stores/ui";
 
 const uiStore = useUiStore();
 let gui: dat.GUI | null = null;
 
-watch(() => uiStore.isConfigOpen, (open) => {
+const props = defineProps<{
+  config: Record<string, any>
+}>();
+const emit = defineEmits(['update'])
+
+const openControl = (open: boolean) => {
   if (open) {
     gui = new dat.GUI({name: 'asd'});
     const control = gui.addFolder("control");
     control.open();
+    // Add controls for each property in the config object
+    for (const key in props.config) {
+      control.add(props.config, key).onChange((value) => {
+        // Update the config object and emit the update event when a control changes
+        props.config[key] = value;
+        emit('update', props.config);
+      });
+    }
+  }
+}
+openControl(uiStore.isConfigOpen);
+onUnmounted(() => {
+  if (gui) {
+    gui.destroy();
+    gui = null;
+  }
+});
+
+watch(() => uiStore.isConfigOpen, (open) => {
+  if (open) {
+    openControl(true);
   } else if (gui) {
     gui.destroy();
     gui = null;
