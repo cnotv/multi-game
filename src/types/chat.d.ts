@@ -4,17 +4,21 @@ interface Message {
   text: string;
 }
 
+interface UserRotation {
+  _x: number;
+  _y: number;
+  _z: number;
+}
+
+interface UserPosition {
+  x: number;
+  y: number;
+  z: number;
+}
+
 interface User {
   name: string;
   id: string;
-  position: {
-    x: number;
-    y: number;
-    z: number;
-  };
-  rotation: {
-    _x: number;
-    _y: number;
-    _z: number;
-  }
+  position: UserPosition;
+  rotation: UserRotation;
 }
