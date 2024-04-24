@@ -11,18 +11,22 @@ type Model = THREE.Group<THREE.Object3DEventMap>
 type UserModel = { model: Model, mixer: THREE.AnimationMixer }
 
 const userStore = useUsersStore();
-
 const isFocused = ref(true)
 const canvas = ref(null)
 
-let velocityY = 0
-const gravity = 0.01
-const worldSize = 500;
 let scene: THREE.Scene;
 let orbit: OrbitControls;
 let players: Record<string, UserModel> = {};
 let player: UserModel | null = null;
 let frame: number = 0;
+
+const config = {
+  velocity: {
+    y: 0,
+  },
+  gravity: 0.01,
+  worldSize: 500,
+}
 
 const keyState: Record<string, boolean> = {}
 const keyUp = (event: KeyboardEvent) => (keyState[event.key] = true)
@@ -250,18 +254,18 @@ const movePlayer = (player: UserModel, frame: number, camera: THREE.PerspectiveC
     }
 
     if (keyState[' ']) {
-      velocityY = 0.1  // Set an upward velocity when the space key is pressed
+      config.velocity.y = 0.1  // Set an upward velocity when the space key is pressed
     }
   }
 
   // Apply the velocity and gravity
-  velocityY -= gravity
-  model.position.y += velocityY
+  config.velocity.y -= config.gravity
+  model.position.y += config.velocity.y
 
   // Prevent the model from falling below the ground
   if (model.position.y < 0) {
     model.position.y = 0
-    velocityY = 0
+    config.velocity.y = 0
   }
 
   // Set the camera's position to be a certain offset from the model's position
@@ -270,11 +274,11 @@ const movePlayer = (player: UserModel, frame: number, camera: THREE.PerspectiveC
   camera.position.z = model.position.z + 10; // 10 units behind the model
 
   // Make the camera look at the model
-  camera.lookAt(model.position);
+  // camera.lookAt(model.position);
 }
 
 const loadGround = (scene: THREE.Scene, loader: THREE.TextureLoader) => {
-  const groundGeometry = new THREE.PlaneGeometry(worldSize, worldSize);
+  const groundGeometry = new THREE.PlaneGeometry(config.worldSize, config.worldSize);
   const groundTexture = loader.load(new URL('../assets/grass.jpg', import.meta.url) as unknown as string);
   const groundMaterial = new THREE.MeshBasicMaterial({ map: groundTexture });
   const ground = new THREE.Mesh(groundGeometry, groundMaterial);
@@ -284,7 +288,7 @@ const loadGround = (scene: THREE.Scene, loader: THREE.TextureLoader) => {
 }
 
 const loadSky = (scene: THREE.Scene, loader: THREE.TextureLoader) => {
-  const skyGeometry = new THREE.SphereGeometry(worldSize, 32, 32);
+  const skyGeometry = new THREE.SphereGeometry(config.worldSize, 32, 32);
   const skyTexture = loader.load(new URL('../assets/sky.png', import.meta.url) as unknown as string);
   const skyMaterial = new THREE.MeshBasicMaterial({ map: skyTexture, side: THREE.BackSide });
   const sky = new THREE.Mesh(skyGeometry, skyMaterial);
