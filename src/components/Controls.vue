@@ -18,11 +18,20 @@ const openControl = (open: boolean) => {
     control.open();
     // Add controls for each property in the config object
     for (const key in props.config) {
-      control.add(props.config, key).onChange((value) => {
-        // Update the config object and emit the update event when a control changes
-        props.config[key] = value;
-        emit('update', props.config);
-      });
+      if (typeof props.config[key] === 'object') {
+        control.addFolder(key);
+        for (const subKey in props.config[key]) {
+          control.add(props.config[key], subKey).onChange((value) => {
+            props.config[key][subKey] = value;
+            emit('update', props.config);
+          });
+        }
+      } else {
+        control.add(props.config, key).onChange((value) => {
+          props.config[key] = value;
+          emit('update', props.config);
+        });
+      }
     }
   }
 }
