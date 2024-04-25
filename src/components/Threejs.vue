@@ -7,6 +7,7 @@ import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js';
 import { useUsersStore } from "@/stores/users";
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import Controls from '@/components/Controls.vue'
+import { n } from 'vitest/dist/reporters-P7C2ytIv.js';
 
 type Model = THREE.Group<THREE.Object3DEventMap>
 type UserModel = { model: Model, mixer: THREE.AnimationMixer }
@@ -25,6 +26,20 @@ const config = {
   velocityY: 0,
   gravity: 0.01,
   worldSize: 500,
+  fov: 60,
+  aspect: window.innerWidth / window.innerHeight,
+  near: 1.0,
+  far: 1000.0,
+  offset: {
+    x: 0,
+    y: 8,
+    z: -15,
+  },
+  lookAt: {
+    x: 0,
+    y: 10,
+    z: 50,
+  }
 }
 
 const keyState: Record<string, boolean> = {}
@@ -245,11 +260,9 @@ const movePlayer = (player: UserModel, frame: number, camera: THREE.PerspectiveC
     }
     if (keyState['ArrowLeft'] || keyState['a']) {
       model.rotateY(0.05)
-      camera.rotateY(0.05)
     }
     if (keyState['ArrowRight'] || keyState['d']) {
       model.rotateY(-0.05)
-      camera.rotateY(-0.05)
     }
 
     if (keyState[' ']) {
@@ -267,13 +280,7 @@ const movePlayer = (player: UserModel, frame: number, camera: THREE.PerspectiveC
     config.velocityY = 0
   }
 
-  // Set the camera's position to be a certain offset from the model's position
-  camera.position.x = model.position.x;
-  camera.position.y = model.position.y + 5; // 5 units above the model
-  camera.position.z = model.position.z + 10; // 10 units behind the model
-
-  // Make the camera look at the model
-  // camera.lookAt(model.position);
+  updateCamera(camera, frame);
 }
 
 const loadGround = (scene: THREE.Scene, loader: THREE.TextureLoader) => {
@@ -308,6 +315,34 @@ const loadLight = (scene: THREE.Scene) => {
   scene.add(ambientLight);
 }
 
+const getOffset = (model: Model) => {
+  const { x, y, z } = config.offset;
+  const offset = new THREE.Vector3(x, y, z)
+  offset.applyQuaternion(model.quaternion);
+  offset.add(model.position);
+
+  return offset;
+}
+
+const getLookAt = (model: Model) => {
+  const { x, y, z } = config.lookAt;
+  const lookAt = new THREE.Vector3(x, y, z)
+  lookAt.applyQuaternion(model.quaternion);
+  lookAt.add(model.position);
+
+  return lookAt;
+}
+
+const updateCamera = (camera: THREE.PerspectiveCamera, frame: number) => {
+  if (player) {
+    const offset = getOffset(player.model);
+    const lookAt = getLookAt(player.model);
+
+    camera.position.copy(offset);
+    camera.lookAt(lookAt);
+  }
+}
+
 /**
  * Initialize ThreeJS scene and return used tools
  */
@@ -316,9 +351,7 @@ const loadScene = (canvas: HTMLCanvasElement) => {
   const renderer = new THREE.WebGLRenderer({ canvas: canvas });
   renderer.setSize( window.innerWidth, window.innerHeight );
   renderer.setClearColor(0x000000); // Set background color to black
-  const camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
-  camera.position.z = 5;
-  camera.position.y = 1;
+  const camera = new THREE.PerspectiveCamera( config.fov, config.aspect, config.near, config.far );
   scene = new THREE.Scene();
   orbit = new OrbitControls(camera, renderer.domElement);
 
@@ -356,6 +389,6 @@ const init = async(canvas: HTMLCanvasElement) => {
 </script>
 
 <template>
-  <Controls :config="config" @update="config => config" />
+  <Controls :config="config" @update="config => {}" />
   <canvas ref="canvas"></canvas>
 </template>
