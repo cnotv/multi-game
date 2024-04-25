@@ -1,9 +1,12 @@
 import { defineStore } from "pinia";
 import { socket } from "@/socket";
+import { getStorageItem } from "@/utils/localStorage";
+
+const getName = (state: any) => getStorageItem(state, 'name') || `Guest${Math.floor(Math.random() * 1000)}`
 
 const defaultUser = () => ({
   id: Date.now().toString(),
-  name: `Guest${Math.floor(Math.random() * 1000)}`,
+  name: '',
   position: {
     x: 0,
     y: 0,
@@ -27,7 +30,7 @@ export const useUsersStore = defineStore("user", {
     bindEvents() {
       // sync the list of users upon connection
       socket.on("connect", () => {
-        this.createUser(`Guest${Math.floor(Math.random() * 1000)}`);
+        this.createUser(getName(this.$state));
       });
 
       socket.on("user:list", ({users, id}: {users: User[], id: string}) => {

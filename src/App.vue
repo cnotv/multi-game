@@ -1,20 +1,34 @@
 <script setup lang="ts">
+import { watch } from "vue";
 import { RouterLink, RouterView } from 'vue-router'
 import { useUiStore } from "@/stores/ui";
 import { useUsersStore } from "@/stores/users";
 import { useConnectionStore } from "@/stores/connection";
 import { socket } from "@/socket";
 import Chat from '@/components/Chat.vue'
+import { getStorageItem, setStorageItem } from "@/utils/localStorage";
 
 const uiStore = useUiStore();
 const userStore = useUsersStore();
 const connectionStore = useConnectionStore();
+
+
+// Load state from localStorage
+['isChatOpen', 'isConfigOpen', 'isUserListOpen'].forEach((key) => getStorageItem(uiStore, key) === 'true');
 
 // remove any existing listeners (after a hot module replacement)
 socket.off();
 
 userStore.bindEvents();
 connectionStore.bindEvents();
+
+// Set UI in localsStorage
+watch(() => uiStore.$state, (state) => {
+  ['isChatOpen', 'isConfigOpen', 'isUserListOpen'].forEach((key) => setStorageItem(state, key));
+}, { deep: true });
+
+// Set in username localsStorage
+watch(() => userStore.$state.user, (user) => setStorageItem(user, 'name'), { deep: true });
 </script>
 
 <template>
