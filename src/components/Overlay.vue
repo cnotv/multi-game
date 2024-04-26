@@ -9,17 +9,16 @@ const usersStore = useUsersStore();
 <template>
   <div class="ui">
     <div 
-      class="ui-users"
+      class="ui__users"
       v-if="uiStore.isUserListOpen"
     >
-      User list:
+      <div class="ui__users__title">👥 Users list</div>
       <div 
-        class="ui-users-item"
+        class="ui__users__item"
         v-for="user in usersStore.users"
       >
         {{ user.name }}
         {{ user.id }}
-        {{ user.rotation }}
       </div>
     </div>
   </div>
@@ -28,12 +27,29 @@ const usersStore = useUsersStore();
 <style lang="scss">
 
 .ui {
-  position: absolute;
-  top: 0;
-  left: 0;
-  z-index: 100;
-  color: white;
-  font-size: 20px;
-  padding: 10px;
+  &__users {
+    position: absolute;
+    max-width: 300px;
+    border: 1px solid black;
+    overflow: hidden;
+
+    display: grid;
+    grid-template-rows: auto 1fr;
+    width: 100%;
+    max-width: 500px;
+    max-height: 700px;
+
+    &__title {
+      background-color: var(--color-background);
+      padding: 10px;
+      font-size: 1.5em;
+    }
+
+    &__item {
+      background-color: var(--color-background);
+      opacity: 0.75;
+      padding: 10px;
+    }
+  }
 }
 </style>

@@ -89,10 +89,6 @@ onMounted(() => {
   position: absolute;
   bottom: 0;
   right: 0;
-  max-width: 300px;
-  height: 100%;
-  background-color: white;
-  border: 1px solid black;
   overflow: hidden;
 
   display: grid;
@@ -103,6 +99,7 @@ onMounted(() => {
   min-height: 200px;
   max-height: 700px;
   background-color: var(--color-background);
+  border: 1px solid black;
   opacity: 0.75;
 
   &__messages {
