@@ -23,13 +23,13 @@ const openControl = (open: boolean) => {
         for (const subKey in props.config[key]) {
           control.add(props.config[key], subKey).onChange((value) => {
             props.config[key][subKey] = value;
-            emit('update', props.config);
+            emit('update', { key, config: props.config });
           });
         }
       } else {
         control.add(props.config, key).onChange((value) => {
           props.config[key] = value;
-          emit('update', props.config);
+          emit('update', { key, config: props.config });
         });
       }
     }
