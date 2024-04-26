@@ -21,6 +21,7 @@ let orbit: OrbitControls;
 let players: Record<string, UserModel> = {};
 let player: UserModel | null = null;
 let frame: number = 0;
+let globalCamera: THREE.PerspectiveCamera;
 
 const config = {
   velocityY: 0,
@@ -30,6 +31,7 @@ const config = {
   aspect: window.innerWidth / window.innerHeight,
   near: 1.0,
   far: 1000.0,
+  showHelpers: false,
   offset: {
     x: 0,
     y: 3,
@@ -363,11 +365,30 @@ const loadScene = (canvas: HTMLCanvasElement) => {
   const renderer = new THREE.WebGLRenderer({ canvas: canvas });
   renderer.setSize( window.innerWidth, window.innerHeight );
   renderer.setClearColor(0x000000); // Set background color to black
-  const camera = new THREE.PerspectiveCamera( config.fov, config.aspect, config.near, config.far );
+  globalCamera = new THREE.PerspectiveCamera( config.fov, config.aspect, config.near, config.far );
   scene = new THREE.Scene();
-  orbit = new OrbitControls(camera, renderer.domElement);
+  orbit = new OrbitControls(globalCamera, renderer.domElement);
 
-  return { scene, orbit, renderer, camera };
+  return { scene, orbit, renderer, camera: globalCamera };
+}
+
+const onConfigUpdate = ({ key, config }: { key: string, config: Record<string, any >}) => {
+  Object.assign(config, config);
+
+  if (key === 'showHelpers') {
+    if (config.showHelpers) {
+      const helper = new THREE.CameraHelper(globalCamera);
+      scene.add(helper);
+      const axesHelper = new THREE.AxesHelper(500);
+      scene.add(axesHelper);
+    } else {
+      // Get indexes and reverse for removing the last element first
+      const indexes = scene.children
+        .filter(child => child instanceof THREE.CameraHelper || child instanceof THREE.AxesHelper)
+        .map(child => scene.children.indexOf(child));
+      indexes.sort((a, b) => b - a).forEach(i => scene.remove(scene.children[i]));
+    }
+  }
 }
  
 const init = async(canvas: HTMLCanvasElement) => {
@@ -396,6 +417,6 @@ const init = async(canvas: HTMLCanvasElement) => {
 </script>
 
 <template>
-  <Controls :config="config" @update="config => {}" />
+  <Controls :config="config" @update="onConfigUpdate" />
   <canvas ref="canvas"></canvas>
 </template>
