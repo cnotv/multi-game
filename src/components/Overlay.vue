@@ -32,6 +32,7 @@ const usersStore = useUsersStore();
     max-width: 300px;
     border: 1px solid black;
     overflow: hidden;
+    font-family: "Darumadrop One", sans-serif;
 
     display: grid;
     grid-template-rows: auto 1fr;
@@ -40,13 +41,13 @@ const usersStore = useUsersStore();
     max-height: 700px;
 
     &__title {
-      background-color: var(--color-background);
+      background-color: var(--color-background-soft);
       padding: 10px;
-      font-size: 1.5em;
+      font-size: 1.2em;
     }
 
     &__item {
-      background-color: var(--color-background);
+      background-color: var(--color-background-soft);
       opacity: 0.75;
       padding: 10px;
     }

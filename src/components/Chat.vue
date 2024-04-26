@@ -90,7 +90,6 @@ onMounted(() => {
   bottom: 0;
   right: 0;
   overflow: hidden;
-  font-family: "Darumadrop One", sans-serif;
   font-weight: 400;
   font-style: normal;
   display: grid;
@@ -135,13 +134,16 @@ onMounted(() => {
 
     &__button {
       font-size: 1.5em;
-      font-family: "Darumadrop One", sans-serif;
       font-weight: 400;
     }
 
     &__input, &__button {
       height: 54px;
     }
+  }
+
+  &, &__actions__input, &__actions__button {
+    font-family: "Darumadrop One", sans-serif;
   }
 }
 </style>

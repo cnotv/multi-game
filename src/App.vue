@@ -40,6 +40,7 @@ watch(() => userStore.$state.user, (user) => setStorageItem(user, 'name'), { dee
           :class="{ 'status--connected': connectionStore.isConnected }"
         ></span>
         <input 
+          class="name-input"
           type="text"
           placeholder="Press enter to type"
           :value="userStore.user.name"
@@ -111,10 +112,15 @@ watch(() => userStore.$state.user, (user) => setStorageItem(user, 'name'), { dee
   }
 }
 
+.name-input {
+  font-family: "Darumadrop One", sans-serif;
+}
+
 .btn__counter {
   position: absolute;
-  margin-top: 1.5em;
+  margin-top: 1em;
   margin-left: 0.2em;
+  font-family: "Darumadrop One", sans-serif;
   font-size: 0.7em;
   font-weight: 900;
 }
