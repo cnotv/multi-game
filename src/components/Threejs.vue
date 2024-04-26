@@ -7,7 +7,6 @@ import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js';
 import { useUsersStore } from "@/stores/users";
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import Controls from '@/components/Controls.vue'
-import { n } from 'vitest/dist/reporters-P7C2ytIv.js';
 
 type Model = THREE.Group<THREE.Object3DEventMap>
 type UserModel = { model: Model, mixer: THREE.AnimationMixer }
@@ -32,7 +31,7 @@ const config = {
   far: 1000.0,
   offset: {
     x: 0,
-    y: 8,
+    y: 3,
     z: -15,
   },
   lookAt: {
@@ -80,6 +79,7 @@ watch(() => userStore.users, async (newValue) => {
         });
         // TODO: Avoid to create a new player and remove models by ID
         player = await setModel();
+        // loadFonts(player.model, userStore.user.name);
       } else {
         updatePosition(cube, user, frame);
       }
@@ -88,30 +88,28 @@ watch(() => userStore.users, async (newValue) => {
 })
 
 /**
- * Add fonts on top of the cube
+ * Add fonts on top of the model
  */
-const loadFonts = (cube: Model) => {
+const loadFonts = (model: Model, name: string) => {
   // Load the font
   const loader = new FontLoader();
   const fontFile = new URL('../assets/Lato_Regular.json', import.meta.url) as unknown as string;
 
-  userStore.users.forEach(user => {
-    loader.load(fontFile, function (font) {
-      // Create a TextGeometry with the user name
-      const geometry = new TextGeometry(user.name, {
-        font: font,
-        size: 0.2,
-        depth: 0.1,
-      });
-
-      // Add the TextGeometry to the cube
-      const material = new THREE.MeshStandardMaterial({ color: 0xffffff });
-      const text = new THREE.Mesh(geometry, material);
-      // text.position.z = 0.5;
-      text.position.y = 0.7;
-      text.position.x = -0.35;
-      cube.add(text)
+  loader.load(fontFile, function (font) {
+    // Create a TextGeometry with the user name
+    const geometry = new TextGeometry(name, {
+      font: font,
+      size: 0.2,
+      depth: 0.1,
     });
+
+    // Add the TextGeometry to the model
+    const material = new THREE.MeshStandardMaterial({ color: 0xffffff });
+    const text = new THREE.Mesh(geometry, material);
+    // text.position.z = 0.5;
+    text.position.y = 0.7;
+    text.position.x = -0.35;
+    model.add(text)
   });
 }
 
@@ -285,7 +283,13 @@ const movePlayer = (player: UserModel, frame: number, camera: THREE.PerspectiveC
 
 const loadGround = (scene: THREE.Scene, loader: THREE.TextureLoader) => {
   const groundGeometry = new THREE.PlaneGeometry(config.worldSize, config.worldSize);
-  const groundTexture = loader.load(new URL('../assets/grass.jpg', import.meta.url) as unknown as string);
+  const groundTexture = loader.load(new URL('../assets/grass2.jpg', import.meta.url) as unknown as string);
+
+  // Repeat the texture
+  groundTexture.wrapS = THREE.RepeatWrapping;
+  groundTexture.wrapT = THREE.RepeatWrapping;
+  groundTexture.repeat.set(10, 10);  // Repeat the texture 10 times in both directions
+
   const groundMaterial = new THREE.MeshBasicMaterial({ map: groundTexture });
   const ground = new THREE.Mesh(groundGeometry, groundMaterial);
   ground.rotation.x = -Math.PI / 2;  // Rotate the ground to make it horizontal
@@ -295,7 +299,7 @@ const loadGround = (scene: THREE.Scene, loader: THREE.TextureLoader) => {
 
 const loadSky = (scene: THREE.Scene, loader: THREE.TextureLoader) => {
   const skyGeometry = new THREE.SphereGeometry(config.worldSize, 32, 32);
-  const skyTexture = loader.load(new URL('../assets/sky.png', import.meta.url) as unknown as string);
+  const skyTexture = loader.load(new URL('../assets/landscape.jpg', import.meta.url) as unknown as string);
   const skyMaterial = new THREE.MeshBasicMaterial({ map: skyTexture, side: THREE.BackSide });
   const sky = new THREE.Mesh(skyGeometry, skyMaterial);
   scene.add(sky);
@@ -365,17 +369,11 @@ const init = async(canvas: HTMLCanvasElement) => {
     resetModels(scene)
     players = await setPlayers(scene);
     player = await setModel();
-    // loadFonts();
+    // loadFonts(player.model, userStore.user.name);
     loadEnv(scene);
     
     function animate() {
       frame = requestAnimationFrame(animate);
-      // Object.entries(players).forEach(([id, cube]) => {
-      //   const user = userStore.users.find(user => user.id === id);
-      //   if (cube && user) {
-      //     updatePosition(cube, user, frame);
-      //   }
-      // });
       if (player) {
         movePlayer(player, frame, camera, orbit);
       }
