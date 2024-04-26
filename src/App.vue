@@ -35,6 +35,10 @@ watch(() => userStore.$state.user, (user) => setStorageItem(user, 'name'), { dee
   <div class="layout">
     <header class="layout__header">
       <nav class="layout__header__left">
+        <span 
+          class="status"
+          :class="{ 'status--connected': connectionStore.isConnected }"
+        ></span>
         <input 
           type="text"
           placeholder="Press enter to type"
@@ -42,13 +46,14 @@ watch(() => userStore.$state.user, (user) => setStorageItem(user, 'name'), { dee
           @input="(event: Event) => userStore.changeUserName(event.target!.value)"
           ref="inputElement"
         />
-        <RouterLink to="/">Chat room</RouterLink>
+        <!-- <RouterLink to="/">Chat room</RouterLink> -->
         <!-- <RouterLink to="/about">About</RouterLink> -->
-        {{ connectionStore.isConnected ? 'Connected' : 'Disconnected' }}
-        - Users online: ({{ userStore.users.length }})
       </nav>
       <nav class="layout__header__right">
-        <button @click="uiStore.toggleUserList()">👥</button>
+        <button class="btn" @click="uiStore.toggleUserList()">
+          👥
+          <span class="btn__counter">{{ userStore.users.length }}</span>
+        </button>
         <button @click="uiStore.toggleConfig()">⚙️</button>
         <button @click="uiStore.toggleChat()">💬</button>
       </nav>
@@ -91,5 +96,26 @@ watch(() => userStore.$state.user, (user) => setStorageItem(user, 'name'), { dee
     position: relative;
     overflow: hidden;
   }
+}
+
+.status {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  border-radius: 50%;
+  margin: 0 1em;
+  background-color: red;
+  
+  &--connected {
+    background-color: green;
+  }
+}
+
+.btn__counter {
+  position: absolute;
+  margin-top: 1.5em;
+  margin-left: 0.2em;
+  font-size: 0.7em;
+  font-weight: 900;
 }
 </style>
