@@ -7,6 +7,7 @@ import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js';
 import { useUsersStore } from "@/stores/users";
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import Controls from '@/components/Controls.vue'
+import type { ThreeMFLoader } from 'three/examples/jsm/Addons.js';
 
 type Model = THREE.Group<THREE.Object3DEventMap>
 type UserModel = { model: Model, mixer: THREE.AnimationMixer }
@@ -53,13 +54,14 @@ onMounted(async() => {
   window.addEventListener('focusout', handleFocusOut)
   window.addEventListener('keydown', keyUp)
   window.addEventListener('keyup', keyDown)
-
+  
   onUnmounted(() => {
     window.removeEventListener('focusin', handleFocusIn)
     window.removeEventListener('focusout', handleFocusOut)
     window.removeEventListener('keydown', keyUp)
     window.removeEventListener('keyup', keyDown)
-  })
+    window.removeEventListener('resize', () => onBrowserResize)
+  }) 
 
   await init(
     canvas.value as unknown as HTMLCanvasElement,
@@ -347,6 +349,12 @@ const updateCamera = (camera: THREE.PerspectiveCamera, frame: number) => {
   }
 }
 
+const onBrowserResize = (camera: THREE.PerspectiveCamera, renderer: THREE.WebGLRenderer) => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
 /**
  * Initialize ThreeJS scene and return used tools
  */
@@ -365,6 +373,7 @@ const loadScene = (canvas: HTMLCanvasElement) => {
 const init = async(canvas: HTMLCanvasElement) => {
   const setup = async () => {
     const { scene, orbit, renderer, camera } = loadScene(canvas);
+    window.addEventListener('resize', onBrowserResize.bind(null, camera, renderer))
     loadLight(scene);
     resetModels(scene)
     players = await setPlayers(scene);
