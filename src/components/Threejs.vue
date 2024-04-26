@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import * as THREE from 'three';
 import { ref, onMounted, onUnmounted, watch } from 'vue';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js';
 import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js';
 import { useUsersStore } from "@/stores/users";
@@ -17,7 +16,6 @@ const isFocused = ref(true)
 const canvas = ref(null)
 
 let scene: THREE.Scene;
-let orbit: OrbitControls;
 let players: Record<string, UserModel> = {};
 let player: UserModel | null = null;
 let frame: number = 0;
@@ -216,7 +214,7 @@ const updatePosition = (cube: UserModel, user: User, frame: number) => {
 /**
  * Move the player and emit new scene information
  */
-const movePlayer = (player: UserModel, frame: number, camera: THREE.PerspectiveCamera, orbit: OrbitControls) => {
+const movePlayer = (player: UserModel, frame: number, camera: THREE.PerspectiveCamera) => {
   const { model, mixer } = player;
   if (isFocused.value) {
     if (mixer) {
@@ -367,9 +365,8 @@ const loadScene = (canvas: HTMLCanvasElement) => {
   renderer.setClearColor(0x000000); // Set background color to black
   globalCamera = new THREE.PerspectiveCamera( config.fov, config.aspect, config.near, config.far );
   scene = new THREE.Scene();
-  orbit = new OrbitControls(globalCamera, renderer.domElement);
 
-  return { scene, orbit, renderer, camera: globalCamera };
+  return { scene, renderer, camera: globalCamera };
 }
 
 const onConfigUpdate = ({ key, config }: { key: string, config: Record<string, any >}) => {
@@ -393,7 +390,7 @@ const onConfigUpdate = ({ key, config }: { key: string, config: Record<string, a
  
 const init = async(canvas: HTMLCanvasElement) => {
   const setup = async () => {
-    const { scene, orbit, renderer, camera } = loadScene(canvas);
+    const { scene, renderer, camera } = loadScene(canvas);
     window.addEventListener('resize', onBrowserResize.bind(null, camera, renderer))
     loadLight(scene);
     resetModels(scene)
@@ -405,9 +402,8 @@ const init = async(canvas: HTMLCanvasElement) => {
     function animate() {
       frame = requestAnimationFrame(animate);
       if (player) {
-        movePlayer(player, frame, camera, orbit);
+        movePlayer(player, frame, camera);
       }
-      orbit.update();
       renderer.render( scene, camera );
     }
     animate();
