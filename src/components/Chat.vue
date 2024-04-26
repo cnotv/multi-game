@@ -90,37 +90,34 @@ onMounted(() => {
   bottom: 0;
   right: 0;
   overflow: hidden;
-
+  font-family: "Darumadrop One", sans-serif;
+  font-weight: 400;
+  font-style: normal;
   display: grid;
   grid-template-rows: 1fr auto;
   width: 100%;
   max-width: 500px;
-  height: 30vh;
+  height: 50vh;
   min-height: 200px;
   max-height: 700px;
-  background-color: var(--color-background);
-  border: 1px solid black;
-  opacity: 0.75;
+  opacity: 0.7;
 
   &__messages {
     overflow: auto;
     padding: 0.5em 1em;
     display: flex;
     flex-direction: column;
+    justify-content: end;
 
     &__item {
-      padding: 0.5em;
-      border-radius: 0.5em;
-      background-color: var(--color-background-soft);
+      font-size: 2.5em;
+      text-shadow: 2px 2px 0 black;
+      line-height: 1;
+      color: var(--color-background-soft);
       align-self: flex-start;
 
-      &+& {
-        margin-top: 0.5em;
-      }
-
       &--user {
-        background-color: var(--color-background-user);
-        color: var(--color-text-user);
+        color: var(--color-background-user);
         justify-self: right;
         align-self: flex-end;
       }
@@ -129,12 +126,21 @@ onMounted(() => {
 
   &__actions {
     display: flex;
+    margin-top: 1em;
 
     &__input {
       flex-grow: 1;
+      padding: 1em;
     }
 
     &__button {
+      font-size: 1.5em;
+      font-family: "Darumadrop One", sans-serif;
+      font-weight: 400;
+    }
+
+    &__input, &__button {
+      height: 54px;
     }
   }
 }
