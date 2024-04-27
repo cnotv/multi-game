@@ -44,7 +44,7 @@ watch(() => userStore.$state.user, (user) => setStorageItem(user, 'name'), { dee
           type="text"
           placeholder="Press enter to type"
           :value="userStore.user.name"
-          @input="(event: Event) => userStore.changeUserName(event.target!.value)"
+          @input="(event: any) => userStore.changeUserName(event.target!.value)"
           ref="inputElement"
         />
         <!-- <RouterLink to="/">Chat room</RouterLink> -->
