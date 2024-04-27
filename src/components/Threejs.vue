@@ -6,7 +6,6 @@ import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js';
 import { useUsersStore } from "@/stores/users";
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import Controls from '@/components/Controls.vue'
-import type { ThreeMFLoader } from 'three/examples/jsm/Addons.js';
 
 type Model = THREE.Group<THREE.Object3DEventMap>
 type UserModel = { model: Model, mixer: THREE.AnimationMixer }
@@ -32,13 +31,18 @@ const config = {
   showHelpers: false,
   offset: {
     x: 0,
-    y: 3,
-    z: -15,
+    y: 4,
+    z: -22,
   },
   lookAt: {
     x: 0,
     y: 10,
     z: 50,
+  },
+  light: {
+    intensity: 50,
+    distance: 0,
+    decay: 2,
   }
 }
 
@@ -313,11 +317,31 @@ const loadEnv = (scene: THREE.Scene) => {
   loadSky(scene, loader);
 }
 
-const loadLight = (scene: THREE.Scene) => {
-  const light = new THREE.PointLight(0xffffff, 50);  // Increase the intensity
-  light.position.set(4, 4, 4);  // Adjust the position
-  scene.add(light);
-  const ambientLight = new THREE.AmbientLight(0xffffff, 2);  // Add an ambient light
+const loadLights = (scene: THREE.Scene) => {
+  // const light = new THREE.PointLight(0xffffff, 50, config.light.distance, config.light.decay);  // Increase the intensity
+  // light.position.set(4, 4, 4);  // Adjust the position
+  // scene.add(light);
+  // const ambientLight = new THREE.AmbientLight(0xffffff, config.light.intensity);  // Add an ambient light
+  // scene.add(ambientLight);
+  
+  const directionalLight = new THREE.DirectionalLight(0xFFFFFF, 1.0);
+  directionalLight.position.set(-100, 100, 100);
+  directionalLight.target.position.set(0, 0, 0);
+  directionalLight.castShadow = true;
+  directionalLight.shadow.bias = -0.001;
+  directionalLight.shadow.mapSize.width = 4096;
+  directionalLight.shadow.mapSize.height = 4096;
+  directionalLight.shadow.camera.near = 0.1;
+  directionalLight.shadow.camera.far = 500.0;
+  directionalLight.shadow.camera.near = 0.5;
+  directionalLight.shadow.camera.far = 500.0;
+  directionalLight.shadow.camera.left = 50;
+  directionalLight.shadow.camera.right = -50;
+  directionalLight.shadow.camera.top = 50;
+  directionalLight.shadow.camera.bottom = -50;
+  scene.add(directionalLight);
+
+  const ambientLight = new THREE.AmbientLight(0xFFFFFF, 0.25);
   scene.add(ambientLight);
 }
 
@@ -386,13 +410,22 @@ const onConfigUpdate = ({ key, config }: { key: string, config: Record<string, a
       indexes.sort((a, b) => b - a).forEach(i => scene.remove(scene.children[i]));
     }
   }
+
+  if (key === 'light') {
+    const indexes = scene.children
+      .filter(child => child instanceof THREE.PointLight)
+      .map(child => scene.children.indexOf(child));
+    indexes.sort((a, b) => b - a).forEach(i => scene.remove(scene.children[i]));
+      
+    loadLights(scene);
+  }
 }
  
 const init = async(canvas: HTMLCanvasElement) => {
   const setup = async () => {
     const { scene, renderer, camera } = loadScene(canvas);
     window.addEventListener('resize', onBrowserResize.bind(null, camera, renderer))
-    loadLight(scene);
+    loadLights(scene);
     resetModels(scene)
     players = await setPlayers(scene);
     player = await setModel();
