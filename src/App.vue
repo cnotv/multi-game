@@ -14,7 +14,7 @@ const connectionStore = useConnectionStore();
 
 
 // Load state from localStorage
-['isChatOpen', 'isConfigOpen', 'isUserListOpen'].forEach((key) => getStorageItem(uiStore, key) === 'true');
+['isChatOpen', 'isConfigOpen', 'isUserListOpen', 'isHotkeysOpen'].forEach((key) => getStorageItem(uiStore, key) === 'true');
 
 // remove any existing listeners (after a hot module replacement)
 socket.off();
@@ -24,7 +24,7 @@ connectionStore.bindEvents();
 
 // Set UI in localsStorage
 watch(() => uiStore.$state, (state) => {
-  ['isChatOpen', 'isConfigOpen', 'isUserListOpen'].forEach((key) => setStorageItem(state, key));
+  ['isChatOpen', 'isConfigOpen', 'isUserListOpen', 'isHotkeysOpen'].forEach((key) => setStorageItem(state, key));
 }, { deep: true });
 
 // Set in username localsStorage
@@ -51,6 +51,7 @@ watch(() => userStore.$state.user, (user) => setStorageItem(user, 'name'), { dee
         <!-- <RouterLink to="/about">About</RouterLink> -->
       </nav>
       <nav class="layout__header__right">
+        <button @click="uiStore.toggleHotkeys()">⌨️</button>
         <button class="btn" @click="uiStore.toggleUserList()">
           👥
           <span class="btn__counter">{{ userStore.users.length }}</span>
