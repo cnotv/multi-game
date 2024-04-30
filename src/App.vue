@@ -68,6 +68,7 @@ watch(() => userStore.$state.user, (user) => setStorageItem(user, 'name'), { dee
         :messages="userStore.messages"
         :user="userStore.user"
         @new-message="(message) => userStore.sendMessage(message)"
+        @close-chat="() => uiStore.toggleChat(false)"
       />
     </main>
   </div>

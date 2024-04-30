@@ -12,6 +12,7 @@ const inputElement = ref<HTMLInputElement>()
 
 const emit = defineEmits<{
   (event: 'new-message', payload: string): void
+  (event: 'close-chat'): void
 }>()
 
 const onSendMessage = () => {
@@ -69,6 +70,10 @@ onMounted(() => {
       class="chat__actions"
       @submit.prevent="onSendMessage"
     >
+      <button
+        @click="() => emit('close-chat')"
+        class="chat__actions__button"
+      >X</button>
       <input 
         class="chat__actions__input"
         type="text"

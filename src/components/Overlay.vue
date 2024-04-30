@@ -12,7 +12,10 @@ const usersStore = useUsersStore();
       class="ui__users"
       v-if="uiStore.isUserListOpen"
     >
-      <div class="ui__users__title">👥 Users list</div>
+      <div class="ui__users__header">
+        <div class="ui__users__title">👥 Users list</div>
+        <button class="ui__users__close" @click="uiStore.toggleUserList(false)">X</button>
+      </div>
       <div 
         class="ui__users__item"
         v-for="user in usersStore.users"
@@ -40,10 +43,20 @@ const usersStore = useUsersStore();
     max-width: 500px;
     max-height: 700px;
 
-    &__title {
+    &__header {
+      display: flex;
       background-color: var(--color-background-soft);
       padding: 10px;
       font-size: 1.2em;
+      justify-content: space-between;
+    }
+
+    &__close {
+      font-family: "Darumadrop One", sans-serif;
+    }
+
+    &__title {
+      line-height: 2.5;
     }
 
     &__item {
