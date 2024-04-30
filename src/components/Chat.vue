@@ -71,6 +71,7 @@ onMounted(() => {
       @submit.prevent="onSendMessage"
     >
       <button
+        type="button"
         @click="() => emit('close-chat')"
         class="chat__actions__button"
       >X</button>
