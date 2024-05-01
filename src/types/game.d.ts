@@ -1,0 +1,3 @@
+interface GameBlock {
+  position: ThreePosition
+}

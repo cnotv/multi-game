@@ -25,7 +25,8 @@ export const useUsersStore = defineStore('user', {
   state: () => ({
     users: [] as User[],
     user: defaultUser(),
-    messages: [] as Message[]
+    messages: [] as Message[],
+    blocks: [{ position: { x: 5, y: 1, z: -5 } }] as GameBlock[]
   }),
 
   actions: {

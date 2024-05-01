@@ -8,7 +8,13 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import Controls from '@/components/Controls.vue'
 
 type Model = THREE.Group<THREE.Object3DEventMap>
-type UserModel = { model: Model, mixer: THREE.AnimationMixer }
+type UserModel = {
+  model: Model,
+  mixer: THREE.AnimationMixer,
+  status: {
+    jumping?: boolean,
+  }
+}
 
 const userStore = useUsersStore();
 const isFocused = ref(true)
@@ -29,6 +35,11 @@ const config = {
   near: 1.0,
   far: 1000.0,
   showHelpers: false,
+  speed: {
+    move: 20,
+    rotate: 3,
+    jump: 28
+  },
   offset: {
     x: 0,
     y: 4,
@@ -178,7 +189,7 @@ const setModel = async (): Promise<UserModel> => {
   setAnimationModel(mixer, model, gltf);
   scene.add(model);
 
-  return {model, mixer};
+  return {model, mixer, status: {}};
 }
 
 /**
@@ -191,6 +202,19 @@ const setPlayers = async (scene: THREE.Scene): Promise<Record<string, UserModel>
   }), {});
 
   return players;
+}
+
+const setBlocks = (scene: THREE.Scene) => {
+  const loader = new THREE.TextureLoader();
+  const texture = loader.load(new URL('../assets/brick.jpg', import.meta.url) as unknown as string);
+  const material = new THREE.MeshBasicMaterial({ map: texture });
+
+  userStore.blocks.forEach((block) => {
+    const geometry = new THREE.BoxGeometry(2.5, 2.5, 2.5);
+    const cube = new THREE.Mesh(geometry, material);
+    cube.position.set(block.position.x, block.position.y, block.position.z);
+    scene.add(cube);
+  });
 }
 
 /**
@@ -246,7 +270,7 @@ const movePlayer = (player: UserModel, frame: number, camera: THREE.PerspectiveC
         // Calculate the forward vector
         const forward = new THREE.Vector3();
         model.getWorldDirection(forward);
-        forward.multiplyScalar(0.1);
+        forward.multiplyScalar(config.speed.move * 0.01);
 
         // Add the forward vector to the model's position
         model.position.add(forward);
@@ -257,20 +281,23 @@ const movePlayer = (player: UserModel, frame: number, camera: THREE.PerspectiveC
       const forward = new THREE.Vector3();
       model.getWorldDirection(forward);
       forward.negate();
-      forward.multiplyScalar(0.1);
+      forward.multiplyScalar(config.speed.move * 0.01);
 
       // Add the forward vector to the model's position
       model.position.add(forward);
     }
     if (keyState['ArrowLeft'] || keyState['a']) {
-      model.rotateY(0.05)
+      model.rotateY(config.speed.rotate * 0.01)
     }
     if (keyState['ArrowRight'] || keyState['d']) {
-      model.rotateY(-0.05)
+      model.rotateY(-config.speed.rotate * 0.01)
     }
 
     if (keyState[' ']) {
-      config.velocityY = 0.1  // Set an upward velocity when the space key is pressed
+      if (!player.status.jumping) {
+        config.velocityY = config.speed.jump * 0.01  // Set an upward velocity when the space key is pressed
+        player.status.jumping = true
+      }
     }
   }
 
@@ -282,6 +309,7 @@ const movePlayer = (player: UserModel, frame: number, camera: THREE.PerspectiveC
   if (model.position.y < 0) {
     model.position.y = 0
     config.velocityY = 0
+    player.status.jumping = false
   }
 
   updateCamera(camera, frame);
@@ -431,6 +459,7 @@ const init = async(canvas: HTMLCanvasElement) => {
     player = await setModel();
     // loadFonts(player.model, userStore.user.name);
     loadEnv(scene);
+    setBlocks(scene);
     
     function animate() {
       frame = requestAnimationFrame(animate);
