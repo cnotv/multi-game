@@ -28,7 +28,7 @@ let globalCamera: THREE.PerspectiveCamera;
 
 const config = {
   velocityY: 0,
-  gravity: 0.01,
+  gravity: 25,
   worldSize: 500,
   fov: 60,
   aspect: window.innerWidth / window.innerHeight,
@@ -36,9 +36,9 @@ const config = {
   far: 1000.0,
   showHelpers: false,
   speed: {
-    move: 20,
+    move: 25,
     rotate: 3,
-    jump: 28
+    jump: 45
   },
   offset: {
     x: 0,
@@ -302,7 +302,7 @@ const movePlayer = (player: UserModel, frame: number, camera: THREE.PerspectiveC
   }
 
   // Apply the velocity and gravity
-  config.velocityY -= config.gravity
+  config.velocityY -= (config.gravity * 0.001)
   model.position.y += config.velocityY
 
   // Prevent the model from falling below the ground
