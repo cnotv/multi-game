@@ -206,14 +206,52 @@ const setPlayers = async (scene: THREE.Scene): Promise<Record<string, UserModel>
 
 const setBlocks = (scene: THREE.Scene) => {
   const loader = new THREE.TextureLoader();
-  const texture = loader.load(new URL('../assets/brick.jpg', import.meta.url) as unknown as string);
-  const material = new THREE.MeshBasicMaterial({ map: texture });
 
   userStore.blocks.forEach((block) => {
-    const geometry = new THREE.BoxGeometry(2.5, 2.5, 2.5);
-    const cube = new THREE.Mesh(geometry, material);
-    cube.position.set(block.position.x, block.position.y, block.position.z);
-    scene.add(cube);
+    switch (block.type) {
+      case 'brick': {
+        const texture = loader.load(new URL('../assets/brick.jpg', import.meta.url) as unknown as string);
+        const material = new THREE.MeshBasicMaterial({ map: texture });
+        const geometry = new THREE.BoxGeometry(2.5, 2.5, 2.5);
+        const cube = new THREE.Mesh(geometry, material);
+        cube.position.set(block.position.x, block.position.y, block.position.z);
+        scene.add(cube);
+        break;
+      }
+      
+      case 'question': {
+        const loader = new THREE.TextureLoader();
+
+        // Load the textures
+        const textures = [
+          loader.load(new URL('../assets/question_symbol.jpg', import.meta.url) as unknown as string),
+          loader.load(new URL('../assets/question_symbol.jpg', import.meta.url) as unknown as string),
+          loader.load(new URL('../assets/question_empty.jpg', import.meta.url) as unknown as string),
+          loader.load(new URL('../assets/question_empty.jpg', import.meta.url) as unknown as string),
+          loader.load(new URL('../assets/question_symbol.jpg', import.meta.url) as unknown as string),
+          loader.load(new URL('../assets/question_symbol.jpg', import.meta.url) as unknown as string),
+        ];
+        const materials = textures.map(texture => new THREE.MeshBasicMaterial({ map: texture }));
+        const geometry = new THREE.BoxGeometry(2.5, 2.5, 2.5);
+        const cube = new THREE.Mesh(geometry, materials);
+        cube.position.set(block.position.x, block.position.y, block.position.z);
+        scene.add(cube);
+        break;
+      }
+
+      case 'coin': {
+        const material = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+        const geometry = new THREE.CylinderGeometry(1.25, 1.25, 0.1, 32);
+        const coin = new THREE.Mesh(geometry, material);
+        coin.position.set(block.position.x, block.position.y, block.position.z);
+        coin.rotation.x = Math.PI / 2;
+        scene.add(coin);
+        break;
+      }
+    
+      default:
+        break;
+    }
   });
 }
 

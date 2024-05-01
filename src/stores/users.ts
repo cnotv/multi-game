@@ -27,21 +27,25 @@ export const useUsersStore = defineStore('user', {
     user: defaultUser(),
     messages: [] as Message[],
     blocks: [
-      { position: { x: -25, y: 1, z: -5 } },
+      { type: 'coin', position: { x: -25, y: 6, z: -5 } },
 
-      { position: { x: 5, y: 1, z: -5 } },
-      { position: { x: 7.5, y: 1, z: -5 } },
-      { position: { x: 10, y: 1, z: -5 } },
-      { position: { x: 12.5, y: 1, z: -5 } },
-      { position: { x: 15, y: 1, z: -5 } },
-      { position: { x: 17.5, y: 1, z: -5 } },
-      { position: { x: 20, y: 1, z: -5 } },
+      { type: 'question', position: { x: -20, y: 6, z: -5 } },
 
-      { position: { x: 7.5, y: 3.5, z: -5 } },
-      { position: { x: 10, y: 3.5, z: -5 } },
-      { position: { x: 12.5, y: 3.5, z: -5 } },
-      { position: { x: 15, y: 3.5, z: -5 } },
-      { position: { x: 17.5, y: 3.5, z: -5 } }
+      { type: 'brick', position: { x: -27.5, y: 1, z: -5 } },
+
+      { type: 'brick', position: { x: 5, y: 1, z: -5 } },
+      { type: 'brick', position: { x: 7.5, y: 1, z: -5 } },
+      { type: 'brick', position: { x: 10, y: 1, z: -5 } },
+      { type: 'brick', position: { x: 12.5, y: 1, z: -5 } },
+      { type: 'brick', position: { x: 15, y: 1, z: -5 } },
+      { type: 'brick', position: { x: 17.5, y: 1, z: -5 } },
+      { type: 'brick', position: { x: 20, y: 1, z: -5 } },
+
+      { type: 'brick', position: { x: 7.5, y: 3.5, z: -5 } },
+      { type: 'brick', position: { x: 10, y: 3.5, z: -5 } },
+      { type: 'brick', position: { x: 12.5, y: 3.5, z: -5 } },
+      { type: 'brick', position: { x: 15, y: 3.5, z: -5 } },
+      { type: 'brick', position: { x: 17.5, y: 3.5, z: -5 } }
     ] as GameBlock[]
   }),
 
