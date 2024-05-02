@@ -54,7 +54,7 @@ const connectionStore = useConnectionStore();
     font-family: "Darumadrop One", sans-serif;
 
     @media screen and (max-width: var(--breakpoint-sm)) {
-      max-width: 200px;
+      max-width: 160px;
     }
   }
 }
