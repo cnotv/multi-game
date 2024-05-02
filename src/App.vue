@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { watch } from "vue";
+import { watch, onMounted } from "vue";
 import { RouterLink, RouterView } from 'vue-router'
 import { useUiStore } from "@/stores/ui";
 import { useUsersStore } from "@/stores/users";
@@ -22,6 +22,10 @@ socket.off();
 
 userStore.bindEvents();
 connectionStore.bindEvents();
+
+onMounted(() => {
+  uiStore.isTouchDevice = window.matchMedia('(pointer: coarse)').matches;
+})
 
 // Set UI in localsStorage
 watch(() => uiStore.$state, (state) => {

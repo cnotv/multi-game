@@ -5,7 +5,8 @@ export const useUiStore = defineStore('ui', {
     isChatOpen: false,
     isConfigOpen: false,
     isUserListOpen: false,
-    isHotkeysOpen: true
+    isHotkeysOpen: true,
+    isTouchDevice: false
   }),
 
   actions: {

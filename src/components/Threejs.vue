@@ -4,6 +4,7 @@ import { ref, onMounted, onUnmounted, watch } from 'vue';
 import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js';
 import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js';
 import { useUsersStore } from "@/stores/users";
+import { useUiStore } from "@/stores/ui";
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import Controls from '@/components/Controls.vue'
 import TouchControl from '@/components/TouchControl.vue'
@@ -18,6 +19,7 @@ type UserModel = {
 }
 
 const userStore = useUsersStore();
+const uiStore = useUiStore();
 const isFocused = ref(true)
 const canvas = ref(null)
 
@@ -487,6 +489,24 @@ const onConfigUpdate = ({ key, config }: { key: string, config: Record<string, a
     loadLights(scene);
   }
 }
+
+/**
+ * Set key state based on the touch direction
+ */
+const onMoved = ((direction: BidimensionalCoords | void) => {
+  if (!direction) {
+    keyState['ArrowUp'] = false;
+    keyState['ArrowDown'] = false;
+    keyState['ArrowLeft'] = false;
+    keyState['ArrowRight'] = false;
+  } else {
+    const { x, y } = direction;
+    keyState['ArrowUp'] = y < 0;
+    keyState['ArrowDown'] = y > 0;
+    keyState['ArrowLeft'] = x < 0;
+    keyState['ArrowRight'] = x > 0;
+  }
+});
  
 const init = async(canvas: HTMLCanvasElement) => {
   const setup = async () => {
@@ -515,17 +535,23 @@ const init = async(canvas: HTMLCanvasElement) => {
 
 <template>
   <Controls :config="config" @update="onConfigUpdate" />
+
   <canvas ref="canvas"></canvas>
-  <TouchControl
-    style="left: 25px; bottom: 25px;"
-    ref="touchControlInside"
-    class="touch-control"
-    @moved="onMoved"
-  />
-  <TouchControl
-    style="right: 25px; bottom: 25px;"
-    ref="touchControlInside"
-    class="touch-control"
-    @touched="onTouched"
-  />
+
+  <div v-if="uiStore.isTouchDevice && !uiStore.isChatOpen">
+    <TouchControl
+      style="left: 25px; bottom: 25px;"
+      ref="touchControlInside"
+      class="touch-control"
+      @moved="onMoved"
+      @touchend="onMoved"
+    />
+    <TouchControl
+      style="right: 25px; bottom: 25px;"
+      ref="touchControlInside"
+      class="touch-control"
+      @touchstart="() => keyUp({ key: ' ' } as KeyboardEvent)"
+      @touchend="() => keyDown({ key: ' ' } as KeyboardEvent)"
+    />
+  </div>
 </template>

@@ -8,7 +8,8 @@ let threshold = { x: 0, y: 0 };
 
 const emit = defineEmits<{
   (event: 'moved', payload: BidimensionalCoords): void
-  (event: 'touched'): void
+  (event: 'touchstart'): void
+  (event: 'touchend'): void
 }>()
 
 onMounted(() => {
@@ -29,7 +30,7 @@ onMounted(() => {
   insideElement.addEventListener('touchstart', (event: TouchEvent) => {
     event.preventDefault();
     initialTouchPosition = { x: event.touches[0].clientX, y: event.touches[0].clientY };
-    emit('touched');
+    emit('touchstart');
   });
 
   insideElement.addEventListener('touchmove', (event: TouchEvent) => {
@@ -48,6 +49,7 @@ onMounted(() => {
 
   insideElement.addEventListener('touchend', () => {
     insideElement.style.transform = 'translate(0, 0)';
+    emit('touchend');
   });
 });
 
