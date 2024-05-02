@@ -1,0 +1,109 @@
+<script setup lang="ts">
+import { ref, onMounted, onUnmounted } from 'vue';
+
+const touchControlInside = ref(null as Element|null);
+const touchControlEdge = ref(null as Element|null);
+let initialTouchPosition = { x: 0, y: 0 };
+let threshold = { x: 0, y: 0 };
+
+const emit = defineEmits<{
+  (event: 'moved', payload: BidimensionalCoords): void
+  (event: 'touched'): void
+}>()
+
+onMounted(() => {
+  const insideElement = touchControlInside.value;
+  const edgeElement = touchControlEdge.value;
+
+  if (edgeElement) {
+    threshold = {
+      x: edgeElement.offsetWidth / 2,
+      y: edgeElement.offsetHeight / 2,
+    };
+  }
+
+  if (!insideElement) {
+    return;
+  }
+
+  insideElement.addEventListener('touchstart', (event: TouchEvent) => {
+    event.preventDefault();
+    initialTouchPosition = { x: event.touches[0].clientX, y: event.touches[0].clientY };
+    emit('touched');
+  });
+
+  insideElement.addEventListener('touchmove', (event: TouchEvent) => {
+    event.preventDefault();
+    let xDistance = event.touches[0].clientX - initialTouchPosition.x;
+    let yDistance = event.touches[0].clientY - initialTouchPosition.y;
+
+    // Limit the movement to the threshold
+    xDistance = Math.max(Math.min(xDistance, threshold.x), -threshold.x);
+    yDistance = Math.max(Math.min(yDistance, threshold.y), -threshold.y);
+
+    insideElement.style.transform = `translate(${xDistance}px, ${yDistance}px)`;
+
+    emit('moved', { x: xDistance, y: yDistance });
+  });
+
+  insideElement.addEventListener('touchend', () => {
+    insideElement.style.transform = 'translate(0, 0)';
+  });
+});
+
+onUnmounted(() => {
+  const insideElement = touchControlInside.value;
+
+  if (insideElement) {
+    insideElement.removeEventListener('touchstart');
+    insideElement.removeEventListener('touchmove');
+    insideElement.removeEventListener('touchend');
+  }
+});
+</script>
+
+<template>
+  <div class="touch-control">
+    <div
+      ref="touchControlEdge"
+      class="touch-control__edge"
+    ></div>
+    <div 
+      ref="touchControlInside"
+      class="touch-control__inside"
+    ></div>
+  </div>
+</template>
+
+<style scoped lang="scss">
+.touch-control {
+  position: fixed;
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+
+  &__edge {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--color-background-soft);
+    border-radius: 50%;
+    opacity: 0.5;
+  }
+
+  &__inside {
+    width: 50px;
+    height: 50px;
+    background-color: var(--color-background-soft);
+    border-radius: 50%;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+    opacity: 0.5;
+  }
+}
+</style>

@@ -6,6 +6,7 @@ import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js';
 import { useUsersStore } from "@/stores/users";
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import Controls from '@/components/Controls.vue'
+import TouchControl from '@/components/TouchControl.vue'
 
 type Model = THREE.Group<THREE.Object3DEventMap>
 type UserModel = {
@@ -515,4 +516,16 @@ const init = async(canvas: HTMLCanvasElement) => {
 <template>
   <Controls :config="config" @update="onConfigUpdate" />
   <canvas ref="canvas"></canvas>
+  <TouchControl
+    style="left: 25px; bottom: 25px;"
+    ref="touchControlInside"
+    class="touch-control"
+    @moved="onMoved"
+  />
+  <TouchControl
+    style="right: 25px; bottom: 25px;"
+    ref="touchControlInside"
+    class="touch-control"
+    @touched="onTouched"
+  />
 </template>

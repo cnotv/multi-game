@@ -9,3 +9,8 @@ interface ThreePosition {
   y: number
   z: number
 }
+
+interface BidimensionalCoords {
+  x: number
+  y: number
+}
