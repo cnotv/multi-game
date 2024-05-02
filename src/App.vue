@@ -116,6 +116,10 @@ watch(() => userStore.$state.user, (user) => setStorageItem(user, 'name'), { dee
 
 .name-input {
   font-family: "Darumadrop One", sans-serif;
+
+  @media screen and (max-width: var(--breakpoint-sm)) {
+    max-width: 200px;
+  }
 }
 
 .btn__counter {
