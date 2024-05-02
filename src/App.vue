@@ -6,6 +6,7 @@ import { useUsersStore } from "@/stores/users";
 import { useConnectionStore } from "@/stores/connection";
 import { socket } from "@/socket";
 import Chat from '@/components/Chat.vue'
+import TopNavigation from '@/components/TopNavigation.vue'
 import { getStorageItem, setStorageItem } from "@/utils/localStorage";
 
 const uiStore = useUiStore();
@@ -33,34 +34,7 @@ watch(() => userStore.$state.user, (user) => setStorageItem(user, 'name'), { dee
 
 <template>
   <div class="layout">
-    <header class="layout__header">
-      <nav class="layout__header__left">
-        <span 
-          class="status"
-          :class="{ 'status--connected': connectionStore.isConnected }"
-        ></span>
-        <input 
-          class="name-input"
-          type="text"
-          placeholder="Press enter to type"
-          :value="userStore.user.name"
-          @input="(event: any) => userStore.changeUserName(event.target!.value)"
-          ref="inputElement"
-        />
-        <!-- <RouterLink to="/">Chat room</RouterLink> -->
-        <!-- <RouterLink to="/about">About</RouterLink> -->
-      </nav>
-      <nav class="layout__header__right">
-        <button @click="uiStore.toggleHotkeys()">⌨️</button>
-        <button class="btn" @click="uiStore.toggleUserList()">
-          👥
-          <span class="btn__counter">{{ userStore.users.length }}</span>
-        </button>
-        <button @click="uiStore.toggleConfig()">⚙️</button>
-        <button @click="uiStore.toggleChat()">💬</button>
-      </nav>
-    </header>
-
+    <TopNavigation />
     <main class="layout__main">
       <RouterView />
       <Chat
@@ -83,51 +57,10 @@ watch(() => userStore.$state.user, (user) => setStorageItem(user, 'name'), { dee
   max-height: 100vh;
   width: 100vw;
 
-  &__header {
-    background-color: var(--color-background-soft);
-    padding: 0.5em 0;
-    z-index: 1;
-    display: flex;
-
-    &__right {
-      margin-left: auto;
-    }
-  }
-
   &__main {
     overflow: auto;
     position: relative;
     overflow: hidden;
   }
-}
-
-.status {
-  display: inline-block;
-  width: 1em;
-  height: 1em;
-  border-radius: 50%;
-  margin: 0 1em;
-  background-color: red;
-  
-  &--connected {
-    background-color: green;
-  }
-}
-
-.name-input {
-  font-family: "Darumadrop One", sans-serif;
-
-  @media screen and (max-width: var(--breakpoint-sm)) {
-    max-width: 200px;
-  }
-}
-
-.btn__counter {
-  position: absolute;
-  margin-top: 1em;
-  margin-left: 0.2em;
-  font-family: "Darumadrop One", sans-serif;
-  font-size: 0.7em;
-  font-weight: 900;
 }
 </style>
