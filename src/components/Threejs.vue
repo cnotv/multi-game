@@ -501,10 +501,11 @@ const onMoved = ((direction: BidimensionalCoords | void) => {
     keyState['ArrowRight'] = false;
   } else {
     const { x, y } = direction;
-    keyState['ArrowUp'] = y < 0;
-    keyState['ArrowDown'] = y > 0;
-    keyState['ArrowLeft'] = x < 0;
-    keyState['ArrowRight'] = x > 0;
+    const threshold = 25;
+    keyState['ArrowUp'] = y < -threshold;
+    keyState['ArrowDown'] = y > threshold;
+    keyState['ArrowLeft'] = x < -threshold;
+    keyState['ArrowRight'] = x > threshold;
   }
 });
  
