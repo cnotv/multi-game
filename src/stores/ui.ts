@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 
 export const useUiStore = defineStore('ui', {
   state: () => ({
+    keyState: {} as Record<string, boolean>,
     isChatOpen: false,
     isConfigOpen: false,
     isUserListOpen: false,
@@ -21,6 +22,9 @@ export const useUiStore = defineStore('ui', {
     },
     toggleHotkeys(state?: boolean) {
       this.isHotkeysOpen = state ?? !this.isHotkeysOpen
+    },
+    setKeyState(key: string, state: boolean) {
+      this.keyState[key] = state
     }
   }
 })

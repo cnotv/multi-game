@@ -14,3 +14,5 @@ interface BidimensionalCoords {
   x: number
   y: number
 }
+
+type Model = THREE.Group<THREE.Object3DEventMap>

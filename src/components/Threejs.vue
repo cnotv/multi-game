@@ -8,15 +8,7 @@ import { useUiStore } from "@/stores/ui";
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import Controls from '@/components/Controls.vue'
 import TouchControl from '@/components/TouchControl.vue'
-
-type Model = THREE.Group<THREE.Object3DEventMap>
-type UserModel = {
-  model: Model,
-  mixer: THREE.AnimationMixer,
-  status: {
-    jumping?: boolean,
-  }
-}
+import { resetModels, loadGround, loadSky, setThirdPersonCamera, loadLights } from '@/utils/threeJs';
 
 const userStore = useUsersStore();
 const uiStore = useUiStore();
@@ -60,9 +52,8 @@ const config = {
   }
 }
 
-const keyState: Record<string, boolean> = {}
-const keyUp = (event: KeyboardEvent) => (keyState[event.key] = true)
-const keyDown = (event: KeyboardEvent) => (keyState[event.key] = false)
+const keyUp = (event: KeyboardEvent) => uiStore.setKeyState(event.key, true)
+const keyDown = (event: KeyboardEvent) => uiStore.setKeyState(event.key, false)
 
 onMounted(async() => {
   const handleFocusIn = () => (isFocused.value = false)
@@ -94,11 +85,11 @@ watch(() => userStore.users, async (newValue) => {
       const cube = players[user.id];
       if (!cube) {
         resetModels(scene)
-        setModel().then(cube => {
+        setModel(scene).then(cube => {
           players[user.id] = cube;
         });
         // TODO: Avoid to create a new player and remove models by ID
-        player = await setModel();
+        player = await setModel(scene);
         // loadFonts(player.model, userStore.user.name);
       } else {
         updatePosition(cube, user, frame);
@@ -133,17 +124,6 @@ const loadFonts = (model: Model, name: string) => {
   });
 }
 
-/**
- * Remove all the models types from the scene
- */
-const resetModels = (scene: THREE.Scene) => {
-  for (let i = scene.children.length - 1; i >= 0; i--) {
-    const object = scene.children[i];
-    if (object instanceof THREE.Group && object.isObject3D) {
-      scene.remove(object);
-    }
-  }
-}
 
 /**
  * Return threeJS valid 3D model
@@ -183,7 +163,7 @@ const setAnimationModel = (mixer: THREE.AnimationMixer, model: Model, gltf: any)
 /**
  * Generate model with predefined information (e.g. position) and add it to the scene
  */
-const setModel = async (): Promise<UserModel> => {
+const setModel = async (scene: THREE.Scene): Promise<UserModel> => {
   // Load the model
   const {model, gltf} = await loadModel();
   // Create an AnimationMixer and set the first animation to play
@@ -201,7 +181,7 @@ const setModel = async (): Promise<UserModel> => {
 const setPlayers = async (scene: THREE.Scene): Promise<Record<string, UserModel>> => {
   const players = userStore.users.reduce(async (acc, user) => ({
     ...acc,
-    [user.id]: setModel()
+    [user.id]: setModel(scene)
   }), {});
 
   return players;
@@ -297,7 +277,7 @@ const movePlayer = (player: UserModel, frame: number, camera: THREE.PerspectiveC
         'ArrowRight',
         'd',
         ' ',
-      ].some(key => keyState[key])) {
+      ].some(key => uiStore.keyState[key])) {
         playAnimationModel(mixer, frame)
         // For some reason the rotation is reported as Euler type but it's not
         userStore.updateUserPosition({ position: model.position, rotation: model.rotation as unknown as UserRotation });
@@ -306,7 +286,7 @@ const movePlayer = (player: UserModel, frame: number, camera: THREE.PerspectiveC
       }
     } 
 
-    if (keyState['ArrowUp'] || keyState['w']) {
+    if (uiStore.keyState['ArrowUp'] || uiStore.keyState['w']) {
       // model.position.z -= 0.1
         // Calculate the forward vector
         const forward = new THREE.Vector3();
@@ -316,7 +296,7 @@ const movePlayer = (player: UserModel, frame: number, camera: THREE.PerspectiveC
         // Add the forward vector to the model's position
         model.position.add(forward);
     }
-    if (keyState['ArrowDown'] || keyState['s']) {
+    if (uiStore.keyState['ArrowDown'] || uiStore.keyState['s']) {
       // model.position.z += 0.1
       // Calculate the forward vector
       const forward = new THREE.Vector3();
@@ -327,14 +307,14 @@ const movePlayer = (player: UserModel, frame: number, camera: THREE.PerspectiveC
       // Add the forward vector to the model's position
       model.position.add(forward);
     }
-    if (keyState['ArrowLeft'] || keyState['a']) {
+    if (uiStore.keyState['ArrowLeft'] || uiStore.keyState['a']) {
       model.rotateY(config.speed.rotate * 0.01)
     }
-    if (keyState['ArrowRight'] || keyState['d']) {
+    if (uiStore.keyState['ArrowRight'] || uiStore.keyState['d']) {
       model.rotateY(-config.speed.rotate * 0.01)
     }
 
-    if (keyState[' ']) {
+    if (uiStore.keyState[' ']) {
       if (!player.status.jumping) {
         config.velocityY = config.speed.jump * 0.01  // Set an upward velocity when the space key is pressed
         player.status.jumping = true
@@ -353,93 +333,13 @@ const movePlayer = (player: UserModel, frame: number, camera: THREE.PerspectiveC
     player.status.jumping = false
   }
 
-  updateCamera(camera, frame);
-}
-
-const loadGround = (scene: THREE.Scene, loader: THREE.TextureLoader) => {
-  const groundGeometry = new THREE.PlaneGeometry(config.worldSize, config.worldSize);
-  const groundTexture = loader.load(new URL('../assets/grass2.jpg', import.meta.url) as unknown as string);
-
-  // Repeat the texture
-  groundTexture.wrapS = THREE.RepeatWrapping;
-  groundTexture.wrapT = THREE.RepeatWrapping;
-  groundTexture.repeat.set(10, 10);  // Repeat the texture 10 times in both directions
-
-  const groundMaterial = new THREE.MeshBasicMaterial({ map: groundTexture });
-  const ground = new THREE.Mesh(groundGeometry, groundMaterial);
-  ground.rotation.x = -Math.PI / 2;  // Rotate the ground to make it horizontal
-  ground.position.y = -0.5;
-  scene.add(ground);
-}
-
-const loadSky = (scene: THREE.Scene, loader: THREE.TextureLoader) => {
-  const skyGeometry = new THREE.SphereGeometry(config.worldSize, 32, 32);
-  const skyTexture = loader.load(new URL('../assets/landscape.jpg', import.meta.url) as unknown as string);
-  const skyMaterial = new THREE.MeshBasicMaterial({ map: skyTexture, side: THREE.BackSide });
-  const sky = new THREE.Mesh(skyGeometry, skyMaterial);
-  scene.add(sky);
+  setThirdPersonCamera(camera, config, player);
 }
 
 const loadEnv = (scene: THREE.Scene) => {
   const loader = new THREE.TextureLoader();
-  loadGround(scene, loader);
-  loadSky(scene, loader);
-}
-
-const loadLights = (scene: THREE.Scene) => {
-  // const light = new THREE.PointLight(0xffffff, 50, config.light.distance, config.light.decay);  // Increase the intensity
-  // light.position.set(4, 4, 4);  // Adjust the position
-  // scene.add(light);
-  // const ambientLight = new THREE.AmbientLight(0xffffff, config.light.intensity);  // Add an ambient light
-  // scene.add(ambientLight);
-  
-  const directionalLight = new THREE.DirectionalLight(0xFFFFFF, 1.0);
-  directionalLight.position.set(-100, 100, 100);
-  directionalLight.target.position.set(0, 0, 0);
-  directionalLight.castShadow = true;
-  directionalLight.shadow.bias = -0.001;
-  directionalLight.shadow.mapSize.width = 4096;
-  directionalLight.shadow.mapSize.height = 4096;
-  directionalLight.shadow.camera.near = 0.1;
-  directionalLight.shadow.camera.far = 500.0;
-  directionalLight.shadow.camera.near = 0.5;
-  directionalLight.shadow.camera.far = 500.0;
-  directionalLight.shadow.camera.left = 50;
-  directionalLight.shadow.camera.right = -50;
-  directionalLight.shadow.camera.top = 50;
-  directionalLight.shadow.camera.bottom = -50;
-  scene.add(directionalLight);
-
-  const ambientLight = new THREE.AmbientLight(0xFFFFFF, 0.25);
-  scene.add(ambientLight);
-}
-
-const getOffset = (model: Model) => {
-  const { x, y, z } = config.offset;
-  const offset = new THREE.Vector3(x, y, z)
-  offset.applyQuaternion(model.quaternion);
-  offset.add(model.position);
-
-  return offset;
-}
-
-const getLookAt = (model: Model) => {
-  const { x, y, z } = config.lookAt;
-  const lookAt = new THREE.Vector3(x, y, z)
-  lookAt.applyQuaternion(model.quaternion);
-  lookAt.add(model.position);
-
-  return lookAt;
-}
-
-const updateCamera = (camera: THREE.PerspectiveCamera, frame: number) => {
-  if (player) {
-    const offset = getOffset(player.model);
-    const lookAt = getLookAt(player.model);
-
-    camera.position.copy(offset);
-    camera.lookAt(lookAt);
-  }
+  loadGround(scene, loader, config, '../assets/grass2.jpg');
+  loadSky(scene, loader, config, '../assets/landscape.jpg');
 }
 
 const onBrowserResize = (camera: THREE.PerspectiveCamera, renderer: THREE.WebGLRenderer) => {
@@ -495,17 +395,17 @@ const onConfigUpdate = ({ key, config }: { key: string, config: Record<string, a
  */
 const onMoved = ((direction: BidimensionalCoords | void) => {
   if (!direction) {
-    keyState['ArrowUp'] = false;
-    keyState['ArrowDown'] = false;
-    keyState['ArrowLeft'] = false;
-    keyState['ArrowRight'] = false;
+    uiStore.keyState['ArrowUp'] = false;
+    uiStore.keyState['ArrowDown'] = false;
+    uiStore.keyState['ArrowLeft'] = false;
+    uiStore.keyState['ArrowRight'] = false;
   } else {
     const { x, y } = direction;
     const threshold = 25;
-    keyState['ArrowUp'] = y < -threshold;
-    keyState['ArrowDown'] = y > threshold;
-    keyState['ArrowLeft'] = x < -threshold;
-    keyState['ArrowRight'] = x > threshold;
+    uiStore.keyState['ArrowUp'] = y < -threshold;
+    uiStore.keyState['ArrowDown'] = y > threshold;
+    uiStore.keyState['ArrowLeft'] = x < -threshold;
+    uiStore.keyState['ArrowRight'] = x > threshold;
   }
 });
  
@@ -516,7 +416,7 @@ const init = async(canvas: HTMLCanvasElement) => {
     loadLights(scene);
     resetModels(scene)
     players = await setPlayers(scene);
-    player = await setModel();
+    player = await setModel(scene);
     // loadFonts(player.model, userStore.user.name);
     loadEnv(scene);
     setBlocks(scene);
