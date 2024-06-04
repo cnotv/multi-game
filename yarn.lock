@@ -318,6 +318,11 @@
     "@babel/helper-validator-identifier" "^7.22.20"
     to-fast-properties "^2.0.0"
 
+"@dimforge/rapier3d@^0.13.1":
+  version "0.13.1"
+  resolved "https://registry.npmjs.org/@dimforge/rapier3d/-/rapier3d-0.13.1.tgz#1794590ccf808db9c5eec3b9ad1ae043980c7bd8"
+  integrity sha512-ITCUCqks70njfFt7S+AEynMw4mpNJLmVWkWDzePhe74YLRWbe4Pu8VOyks2hqHBeTCj2Ts7SE5xoyvg9VsyNMg==
+
 "@esbuild/aix-ppc64@0.20.2":
   version "0.20.2"
   resolved "https://registry.npmjs.org/@esbuild/aix-ppc64/-/aix-ppc64-0.20.2.tgz#a70f4ac11c6a1dfc18b8bbb13284155d933b9537"
@@ -3406,6 +3411,11 @@ vite-plugin-vue-inspector@^4.0.2:
     "@vue/compiler-dom" "^3.3.4"
     kolorist "^1.8.0"
     magic-string "^0.30.4"
+
+vite-plugin-wasm@^3.3.0:
+  version "3.3.0"
+  resolved "https://registry.npmjs.org/vite-plugin-wasm/-/vite-plugin-wasm-3.3.0.tgz#2908ef2529bf8f33f4e549c8c6fda26ad273ca15"
+  integrity sha512-tVhz6w+W9MVsOCHzxo6SSMSswCeIw4HTrXEi6qL3IRzATl83jl09JVO1djBqPSwfjgnpVHNLYcaMbaDX5WB/pg==
 
 vite@^5.0.0, vite@^5.1.6:
   version "5.2.8"

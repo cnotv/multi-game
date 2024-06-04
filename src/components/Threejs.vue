@@ -9,6 +9,15 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import Controls from '@/components/Controls.vue'
 import TouchControl from '@/components/TouchControl.vue'
 import { resetModels, loadGround, loadSky, setThirdPersonCamera, loadLights } from '@/utils/threeJs';
+import RAPIER from '@dimforge/rapier3d'
+
+const gravity = new RAPIER.Vector3(0.0, -9.81, 0.0)
+const world = new RAPIER.World(gravity)
+const dynamicBodies: Record<'ground' | 'characters' | 'blocks', [THREE.Object3D, RAPIER.RigidBody][]> = {
+  characters: [],
+  ground: [],
+  blocks: []
+};
 
 const userStore = useUsersStore();
 const uiStore = useUiStore();
@@ -171,6 +180,18 @@ const setModel = async (scene: THREE.Scene): Promise<UserModel> => {
   model.scale.set(0.03, 0.03, 0.03);
   setAnimationModel(mixer, model, gltf);
   scene.add(model);
+
+  // Create a dynamic rigid body for the model
+  const modelBodyDesc = RAPIER.RigidBodyDesc.newDynamic().setTranslation(model.position.x, model.position.y, model.position.z);
+  const modelBody = world.createRigidBody(modelBodyDesc);
+  const modelBodyHandle = world.createRigidBody(modelBodyDesc);
+
+  // Create a collider for the model
+  const modelColliderDesc = RAPIER.ColliderDesc.cuboid(0.03, 0.03, 0.03);
+  world.createCollider(modelColliderDesc, modelBodyHandle);
+
+  // Store the model and its rigid body for later use
+  dynamicBodies.characters.push([model, modelBody]);
 
   return {model, mixer, status: {}};
 }
@@ -338,7 +359,8 @@ const movePlayer = (player: UserModel, frame: number, camera: THREE.PerspectiveC
 
 const loadEnv = (scene: THREE.Scene) => {
   const loader = new THREE.TextureLoader();
-  loadGround(scene, loader, config, '../assets/grass2.jpg');
+  const groundData = loadGround(scene, loader, config, '../assets/grass2.jpg', world)
+  dynamicBodies.ground.push(groundData)
   loadSky(scene, loader, config, '../assets/landscape.jpg');
 }
 
@@ -426,6 +448,18 @@ const init = async(canvas: HTMLCanvasElement) => {
       if (player) {
         movePlayer(player, frame, camera);
       }
+
+      // Step the physics simulation forward
+      world.step();
+
+      // Update the position and rotation of your objects based on the physics simulation
+      dynamicBodies.characters.forEach(([object, body]) => {
+        const translation = body.translation();
+        object.position.set(translation.x, translation.y, translation.z);
+        // const rotation = body.rotation();
+        // object.quaternion.set(rotation.x, rotation.y, rotation.z, rotation.w);
+      });
+
       renderer.render( scene, camera );
     }
     animate();

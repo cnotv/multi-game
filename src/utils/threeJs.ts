@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import RAPIER, { RigidBody } from '@dimforge/rapier3d'
 
 /**
  * Remove all the models types from the scene
@@ -16,8 +17,9 @@ export const loadGround = (
   scene: THREE.Scene,
   loader: THREE.TextureLoader,
   config: any,
-  path: string
-) => {
+  path: string,
+  world: RAPIER.World
+): [THREE.Object3D, RAPIER.RigidBody] => {
   const groundGeometry = new THREE.PlaneGeometry(config.worldSize, config.worldSize)
   const groundTexture = loader.load(new URL(path, import.meta.url) as unknown as string)
 
@@ -31,6 +33,28 @@ export const loadGround = (
   ground.rotation.x = -Math.PI / 2 // Rotate the ground to make it horizontal
   ground.position.y = -0.5
   scene.add(ground)
+
+  // Create a static rigid body for the ground
+  const groundBodyDesc = RAPIER.RigidBodyDesc.newStatic()
+  const groundBody = world.createRigidBody(groundBodyDesc)
+  const groundBodyHandle = world.createRigidBody(groundBodyDesc)
+
+  // Create a collider for the ground
+  // const groundColliderDesc = RAPIER.ColliderDesc.cuboid(500, 1, 500)
+
+  // Create a collider for the ground
+  const groundColliderDesc = RAPIER.ColliderDesc.cuboid(500, 1, 500)
+  const groundColliderHandle = world.createCollider(groundColliderDesc, groundBodyHandle)
+
+  // Create a mesh to visualize the collider
+  const groundColliderGeometry = new THREE.BoxGeometry(500, 1, 500)
+  const groundColliderMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000, wireframe: true })
+  const groundColliderMesh = new THREE.Mesh(groundColliderGeometry, groundColliderMaterial)
+  scene.add(groundColliderMesh)
+  world.createCollider(groundColliderDesc, groundBodyHandle)
+
+  // Return the ground and its rigid body for later use
+  return [ground, groundBody]
 }
 
 export const loadSky = (
