@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { watch, onMounted } from "vue";
+import { watch, onMounted, onUnmounted } from "vue";
 import { RouterLink, RouterView } from 'vue-router'
 import { useUiStore } from "@/stores/ui";
 import { useUsersStore } from "@/stores/users";
@@ -23,9 +23,19 @@ socket.off();
 userStore.bindEvents();
 connectionStore.bindEvents();
 
+const keyUp = (event: KeyboardEvent) => uiStore.setKeyState(event.key, true)
+const keyDown = (event: KeyboardEvent) => uiStore.setKeyState(event.key, false)
+
 onMounted(() => {
   uiStore.isTouchDevice = window.matchMedia('(pointer: coarse)').matches;
+  window.addEventListener('keydown', keyUp)
+  window.addEventListener('keyup', keyDown)
 })
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', keyUp)
+  window.removeEventListener('keyup', keyDown)
+}) 
 
 // Set UI in localsStorage
 watch(() => uiStore.$state, (state) => {

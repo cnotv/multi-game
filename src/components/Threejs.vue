@@ -61,23 +61,16 @@ const config = {
   }
 }
 
-const keyUp = (event: KeyboardEvent) => uiStore.setKeyState(event.key, true)
-const keyDown = (event: KeyboardEvent) => uiStore.setKeyState(event.key, false)
-
 onMounted(async() => {
   const handleFocusIn = () => (isFocused.value = false)
   const handleFocusOut = () => (isFocused.value = true)
 
   window.addEventListener('focusin', handleFocusIn)
   window.addEventListener('focusout', handleFocusOut)
-  window.addEventListener('keydown', keyUp)
-  window.addEventListener('keyup', keyDown)
   
   onUnmounted(() => {
     window.removeEventListener('focusin', handleFocusIn)
     window.removeEventListener('focusout', handleFocusOut)
-    window.removeEventListener('keydown', keyUp)
-    window.removeEventListener('keyup', keyDown)
     window.removeEventListener('resize', () => onBrowserResize)
   }) 
 
@@ -485,8 +478,8 @@ const init = async(canvas: HTMLCanvasElement) => {
       style="right: 25px; bottom: 25px;"
       ref="touchControlInside"
       class="touch-control"
-      @touchstart="() => keyUp({ key: ' ' } as KeyboardEvent)"
-      @touchend="() => keyDown({ key: ' ' } as KeyboardEvent)"
+      @touchstart="() => uiStore.keyState[' '] = true"
+      @touchend="() => uiStore.keyState[' '] = false"
     />
   </div>
 </template>
