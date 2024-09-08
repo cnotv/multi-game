@@ -1,21 +1,50 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue';
 
-const touchControlInside = ref(null as Element|null);
-const touchControlEdge = ref(null as Element|null);
+const touchControlInside = ref(null as HTMLElement|null);
+const touchControlEdge = ref(null as HTMLElement|null);
 let initialTouchPosition = { x: 0, y: 0 };
 let threshold = { x: 0, y: 0 };
 
+const insideElement = touchControlInside.value;
+const edgeElement = touchControlEdge.value;
+  
 const emit = defineEmits<{
   (event: 'moved', payload: BidimensionalCoords): void
   (event: 'touchstart'): void
   (event: 'touchend'): void
 }>()
 
-onMounted(() => {
-  const insideElement = touchControlInside.value;
-  const edgeElement = touchControlEdge.value;
+const onTouchStart = (event: TouchEvent) => {
+  event.preventDefault();
+  initialTouchPosition = { x: event.touches[0].clientX, y: event.touches[0].clientY };
+  emit('touchstart');
+};
 
+const onTouchMove = (event: TouchEvent) => {
+  event.preventDefault();
+  let xDistance = event.touches[0].clientX - initialTouchPosition.x;
+  let yDistance = event.touches[0].clientY - initialTouchPosition.y;
+
+  // Limit the movement to the threshold
+  xDistance = Math.max(Math.min(xDistance, threshold.x), -threshold.x);
+  yDistance = Math.max(Math.min(yDistance, threshold.y), -threshold.y);
+
+  if (insideElement) {
+    insideElement.style.transform = `translate(${xDistance}px, ${yDistance}px)`;
+  }
+
+  emit('moved', { x: xDistance, y: yDistance });
+}
+
+const onTouchEnd = () => {
+  if (insideElement) {
+    insideElement.style.transform = 'translate(0, 0)';
+  }
+  emit('touchend');
+}
+  
+onMounted(() => {
   if (edgeElement) {
     threshold = {
       x: edgeElement.offsetWidth / 2,
@@ -23,43 +52,20 @@ onMounted(() => {
     };
   }
 
-  if (!insideElement) {
-    return;
+  if (insideElement) {
+    insideElement.addEventListener('touchstart', onTouchStart);
+    insideElement.addEventListener('touchmove', onTouchMove);
+    insideElement.addEventListener('touchend', onTouchEnd);
   }
-
-  insideElement.addEventListener('touchstart', (event: TouchEvent) => {
-    event.preventDefault();
-    initialTouchPosition = { x: event.touches[0].clientX, y: event.touches[0].clientY };
-    emit('touchstart');
-  });
-
-  insideElement.addEventListener('touchmove', (event: TouchEvent) => {
-    event.preventDefault();
-    let xDistance = event.touches[0].clientX - initialTouchPosition.x;
-    let yDistance = event.touches[0].clientY - initialTouchPosition.y;
-
-    // Limit the movement to the threshold
-    xDistance = Math.max(Math.min(xDistance, threshold.x), -threshold.x);
-    yDistance = Math.max(Math.min(yDistance, threshold.y), -threshold.y);
-
-    insideElement.style.transform = `translate(${xDistance}px, ${yDistance}px)`;
-
-    emit('moved', { x: xDistance, y: yDistance });
-  });
-
-  insideElement.addEventListener('touchend', () => {
-    insideElement.style.transform = 'translate(0, 0)';
-    emit('touchend');
-  });
 });
 
 onUnmounted(() => {
   const insideElement = touchControlInside.value;
 
   if (insideElement) {
-    insideElement.removeEventListener('touchstart');
-    insideElement.removeEventListener('touchmove');
-    insideElement.removeEventListener('touchend');
+    insideElement.removeEventListener('touchstart', onTouchStart);
+    insideElement.removeEventListener('touchmove', onTouchMove);
+    insideElement.removeEventListener('touchend', onTouchEnd);
   }
 });
 </script>
