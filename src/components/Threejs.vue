@@ -447,8 +447,8 @@ const init = async(canvas: HTMLCanvasElement) => {
 
       // Update the position and rotation of your objects based on the physics simulation
       dynamicBodies.characters.forEach(([object, body]) => {
-        const translation = body.translation();
-        object.position.set(translation.x, translation.y, translation.z);
+        // const translation = body.translation();
+        // object.position.set(translation.x, translation.y, translation.z);
         // const rotation = body.rotation();
         // object.quaternion.set(rotation.x, rotation.y, rotation.z, rotation.w);
       });
