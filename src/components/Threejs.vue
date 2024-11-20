@@ -280,26 +280,6 @@ const updatePosition = (cube: UserModel, user: User, frame: number) => {
 const movePlayer = (player: UserModel, frame: number, camera: THREE.PerspectiveCamera) => {
   const { model, mixer } = player;
   if (isFocused.value) {
-    if (mixer) {
-      if ([
-        'ArrowUp',
-        'w',
-        'ArrowDown',
-        's',
-        'ArrowLeft',
-        'a',
-        'ArrowRight',
-        'd',
-        ' ',
-      ].some(key => uiStore.keyState[key])) {
-        playAnimationModel(mixer, frame)
-        // For some reason the rotation is reported as Euler type but it's not
-        userStore.updateUserPosition({ position: model.position, rotation: model.rotation });
-      } else {
-        resetAnimationModel(mixer)
-      }
-    } 
-
     if (uiStore.keyState['ArrowUp'] || uiStore.keyState['w']) {
       // model.position.z -= 0.1
         // Calculate the forward vector
@@ -328,12 +308,34 @@ const movePlayer = (player: UserModel, frame: number, camera: THREE.PerspectiveC
       model.rotateY(-config.speed.rotate * 0.01)
     }
 
+    // TODO: Model is updated only on key press and not on movement, so jump animation is not completed
     if (uiStore.keyState[' ']) {
       if (!player.status.jumping) {
         config.velocityY = config.speed.jump * 0.01  // Set an upward velocity when the space key is pressed
         player.status.jumping = true
       }
     }
+
+    if (mixer) {
+      if ([
+        'ArrowUp',
+        'w',
+        'ArrowDown',
+        's',
+        'ArrowLeft',
+        'a',
+        'ArrowRight',
+        'd',
+        ' ',
+      ].some(key => uiStore.keyState[key])) {
+        playAnimationModel(mixer, frame)
+        
+        // For some reason the rotation is reported as Euler type but it's not
+        userStore.updateUserPosition({ position: model.position, rotation: model.rotation });
+      } else {
+        resetAnimationModel(mixer)
+      }
+    } 
   }
 
   // Apply the velocity and gravity
