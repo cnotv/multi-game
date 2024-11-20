@@ -40,8 +40,8 @@ const config = {
   far: 1000.0,
   showHelpers: false,
   speed: {
-    move: 25,
-    rotate: 3,
+    move: 40,
+    rotate: 5,
     jump: 45
   },
   offset: {
