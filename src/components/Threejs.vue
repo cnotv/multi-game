@@ -280,7 +280,7 @@ const updatePosition = (cube: UserModel, user: User, frame: number) => {
 const movePlayer = (player: UserModel, frame: number, camera: THREE.PerspectiveCamera) => {
   const { model, mixer } = player;
   if (isFocused.value) {
-    if (uiStore.keyState['ArrowUp'] || uiStore.keyState['w']) {
+    if (uiStore.controls.up) {
       // model.position.z -= 0.1
         // Calculate the forward vector
         const forward = new THREE.Vector3();
@@ -290,7 +290,7 @@ const movePlayer = (player: UserModel, frame: number, camera: THREE.PerspectiveC
         // Add the forward vector to the model's position
         model.position.add(forward);
     }
-    if (uiStore.keyState['ArrowDown'] || uiStore.keyState['s']) {
+    if (uiStore.controls.down) {
       // model.position.z += 0.1
       // Calculate the forward vector
       const forward = new THREE.Vector3();
@@ -301,15 +301,15 @@ const movePlayer = (player: UserModel, frame: number, camera: THREE.PerspectiveC
       // Add the forward vector to the model's position
       model.position.add(forward);
     }
-    if (uiStore.keyState['ArrowLeft'] || uiStore.keyState['a']) {
+    if (uiStore.controls.left) {
       model.rotateY(config.speed.rotate * 0.01)
     }
-    if (uiStore.keyState['ArrowRight'] || uiStore.keyState['d']) {
+    if (uiStore.controls.right) {
       model.rotateY(-config.speed.rotate * 0.01)
     }
 
     // TODO: Model is updated only on key press and not on movement, so jump animation is not completed
-    if (uiStore.keyState[' ']) {
+    if (uiStore.controls.jump) {
       if (!player.status.jumping) {
         config.velocityY = config.speed.jump * 0.01  // Set an upward velocity when the space key is pressed
         player.status.jumping = true
@@ -318,16 +318,12 @@ const movePlayer = (player: UserModel, frame: number, camera: THREE.PerspectiveC
 
     if (mixer) {
       if ([
-        'ArrowUp',
-        'w',
-        'ArrowDown',
-        's',
-        'ArrowLeft',
-        'a',
-        'ArrowRight',
-        'd',
-        ' ',
-      ].some(key => uiStore.keyState[key])) {
+        'left',
+        'right',
+        'up',
+        'down',
+        'jump',
+      ].some(action => uiStore.controls[action])) {
         playAnimationModel(mixer, frame)
         
         // For some reason the rotation is reported as Euler type but it's not
