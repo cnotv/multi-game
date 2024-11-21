@@ -6,8 +6,6 @@ const touchControlEdge = ref(null as HTMLElement|null);
 let initialTouchPosition = { x: 0, y: 0 };
 let threshold = { x: 0, y: 0 };
 
-const insideElement = touchControlInside.value;
-const edgeElement = touchControlEdge.value;
   
 const emit = defineEmits<{
   (event: 'moved', payload: BidimensionalCoords): void
@@ -30,42 +28,40 @@ const onTouchMove = (event: TouchEvent) => {
   xDistance = Math.max(Math.min(xDistance, threshold.x), -threshold.x);
   yDistance = Math.max(Math.min(yDistance, threshold.y), -threshold.y);
 
-  if (insideElement) {
-    insideElement.style.transform = `translate(${xDistance}px, ${yDistance}px)`;
+  if (touchControlInside.value) {
+    touchControlInside.value.style.transform = `translate(${xDistance}px, ${yDistance}px)`;
   }
 
   emit('moved', { x: xDistance, y: yDistance });
 }
 
 const onTouchEnd = () => {
-  if (insideElement) {
-    insideElement.style.transform = 'translate(0, 0)';
+  if (touchControlInside.value) {
+    touchControlInside.value.style.transform = 'translate(0, 0)';
   }
   emit('touchend');
 }
   
 onMounted(() => {
-  if (edgeElement) {
+  if (touchControlEdge.value) {
     threshold = {
-      x: edgeElement.offsetWidth / 2,
-      y: edgeElement.offsetHeight / 2,
+      x: touchControlEdge.value.offsetWidth / 2,
+      y: touchControlEdge.value.offsetHeight / 2,
     };
   }
 
-  if (insideElement) {
-    insideElement.addEventListener('touchstart', onTouchStart);
-    insideElement.addEventListener('touchmove', onTouchMove);
-    insideElement.addEventListener('touchend', onTouchEnd);
+  if (touchControlInside.value) {
+    touchControlInside.value.addEventListener('touchstart', onTouchStart);
+    touchControlInside.value.addEventListener('touchmove', onTouchMove);
+    touchControlInside.value.addEventListener('touchend', onTouchEnd);
   }
 });
 
 onUnmounted(() => {
-  const insideElement = touchControlInside.value;
-
-  if (insideElement) {
-    insideElement.removeEventListener('touchstart', onTouchStart);
-    insideElement.removeEventListener('touchmove', onTouchMove);
-    insideElement.removeEventListener('touchend', onTouchEnd);
+  if (touchControlInside.value) {
+    touchControlInside.value.removeEventListener('touchstart', onTouchStart);
+    touchControlInside.value.removeEventListener('touchmove', onTouchMove);
+    touchControlInside.value.removeEventListener('touchend', onTouchEnd);
   }
 });
 </script>

@@ -408,17 +408,17 @@ const onConfigUpdate = ({ key, config }: { key: string, config: Record<string, a
  */
 const onMoved = ((direction: BidimensionalCoords | void) => {
   if (!direction) {
-    uiStore.keyState['ArrowUp'] = false;
-    uiStore.keyState['ArrowDown'] = false;
-    uiStore.keyState['ArrowLeft'] = false;
-    uiStore.keyState['ArrowRight'] = false;
+    uiStore.controls.up = false;
+    uiStore.controls.down = false;
+    uiStore.controls.left = false;
+    uiStore.controls.right = false;
   } else {
     const { x, y } = direction;
     const threshold = 25;
-    uiStore.keyState['ArrowUp'] = y < -threshold;
-    uiStore.keyState['ArrowDown'] = y > threshold;
-    uiStore.keyState['ArrowLeft'] = x < -threshold;
-    uiStore.keyState['ArrowRight'] = x > threshold;
+    uiStore.controls.up = y < -threshold;
+    uiStore.controls.down = y > threshold;
+    uiStore.controls.left = x < -threshold;
+    uiStore.controls.right = x > threshold;
   }
 });
  
@@ -476,8 +476,8 @@ const init = async(canvas: HTMLCanvasElement) => {
       style="right: 25px; bottom: 25px;"
       ref="touchControlInside"
       class="touch-control"
-      @touchstart="() => uiStore.keyState[' '] = true"
-      @touchend="() => uiStore.keyState[' '] = false"
+      @touchstart="() => uiStore.controls.jump = true"
+      @touchend="() => uiStore.controls.jump = false"
     />
   </div>
 </template>
