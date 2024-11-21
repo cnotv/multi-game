@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { socket } from '@/socket'
 import { getStorageItem } from '@/utils/localStorage'
+import { throttle } from 'lodash'
 
 const getName = (state: any) =>
   getStorageItem(state, 'name') || `Guest${Math.floor(Math.random() * 1000)}`
@@ -92,7 +93,7 @@ export const useUsersStore = defineStore('user', {
       })
     },
 
-    updateUserPosition({
+    updateUserData({
       position,
       rotation
     }: {
@@ -101,7 +102,12 @@ export const useUsersStore = defineStore('user', {
     }) {
       this.user.position = position
       this.user.rotation = rotation
-      socket.emit('user:change', this.user)
+      throttledEmitUserChange(this.user)
     }
   }
 })
+
+// Set rate limit of requests to the server to tickrate (60 for rts and 30 for fps)
+const throttledEmitUserChange = throttle(function (user) {
+  socket.emit('user:change', user)
+}, 30)

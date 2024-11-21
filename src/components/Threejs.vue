@@ -331,7 +331,7 @@ const movePlayer = (player: UserModel, frame: number, camera: THREE.PerspectiveC
         playAnimationModel(mixer, frame)
         
         // For some reason the rotation is reported as Euler type but it's not
-        userStore.updateUserPosition({ position: model.position, rotation: model.rotation });
+        userStore.updateUserData({ position: model.position, rotation: model.rotation });
       } else {
         resetAnimationModel(mixer)
       }
