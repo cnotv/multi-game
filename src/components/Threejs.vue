@@ -1,14 +1,12 @@
 <script setup lang="ts">
 import * as THREE from 'three';
 import { ref, onMounted, onUnmounted, watch } from 'vue';
-import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js';
-import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js';
 import { useUsersStore } from "@/stores/users";
 import { useUiStore } from "@/stores/ui";
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import Controls from '@/components/Controls.vue'
 import TouchControl from '@/components/TouchControl.vue'
-import { resetModels, loadGround, loadSky, setThirdPersonCamera, loadLights } from '@/utils/threeJs';
+import { resetModels, loadGround, loadSky, setThirdPersonCamera, loadLights, config, setBrickBlock, setQuestionBlock, setCoinBlock } from '@/utils/threeJs';
 import RAPIER from '@dimforge/rapier3d'
 
 const gravity = new RAPIER.Vector3(0.0, -9.81, 0.0)
@@ -29,37 +27,6 @@ let players: Record<string, UserModel> = {};
 let player: UserModel | null = null;
 let frame: number = 0;
 let globalCamera: THREE.PerspectiveCamera;
-
-const config = {
-  velocityY: 0,
-  gravity: 25,
-  worldSize: 500,
-  fov: 60,
-  aspect: window.innerWidth / window.innerHeight,
-  near: 1.0,
-  far: 1000.0,
-  showHelpers: false,
-  speed: {
-    move: 40,
-    rotate: 5,
-    jump: 45
-  },
-  offset: {
-    x: 0,
-    y: 4,
-    z: -22,
-  },
-  lookAt: {
-    x: 0,
-    y: 10,
-    z: 50,
-  },
-  light: {
-    intensity: 50,
-    distance: 0,
-    decay: 2,
-  }
-}
 
 onMounted(async() => {
   const handleFocusIn = () => (isFocused.value = false)
@@ -99,33 +66,6 @@ watch(() => userStore.users, async (newValue) => {
     });
   }
 })
-
-/**
- * Add fonts on top of the model
- */
-const loadFonts = (model: Model, name: string) => {
-  // Load the font
-  const loader = new FontLoader();
-  const fontFile = new URL('../assets/Lato_Regular.json', import.meta.url) as unknown as string;
-
-  loader.load(fontFile, function (font) {
-    // Create a TextGeometry with the user name
-    const geometry = new TextGeometry(name, {
-      font: font,
-      size: 0.2,
-      depth: 0.1,
-    });
-
-    // Add the TextGeometry to the model
-    const material = new THREE.MeshStandardMaterial({ color: 0xffffff });
-    const text = new THREE.Mesh(geometry, material);
-    // text.position.z = 0.5;
-    text.position.y = 0.7;
-    text.position.x = -0.35;
-    model.add(text)
-  });
-}
-
 
 /**
  * Return threeJS valid 3D model
@@ -202,50 +142,11 @@ const setPlayers = async (scene: THREE.Scene): Promise<Record<string, UserModel>
 }
 
 const setBlocks = (scene: THREE.Scene) => {
-  const loader = new THREE.TextureLoader();
-
   userStore.blocks.forEach((block) => {
     switch (block.type) {
-      case 'brick': {
-        const texture = loader.load(new URL('../assets/brick.jpg', import.meta.url) as unknown as string);
-        const material = new THREE.MeshBasicMaterial({ map: texture });
-        const geometry = new THREE.BoxGeometry(2.5, 2.5, 2.5);
-        const cube = new THREE.Mesh(geometry, material);
-        cube.position.set(block.position.x, block.position.y, block.position.z);
-        scene.add(cube);
-        break;
-      }
-      
-      case 'question': {
-        const loader = new THREE.TextureLoader();
-
-        // Load the textures
-        const textures = [
-          loader.load(new URL('../assets/question_symbol.jpg', import.meta.url) as unknown as string),
-          loader.load(new URL('../assets/question_symbol.jpg', import.meta.url) as unknown as string),
-          loader.load(new URL('../assets/question_empty.jpg', import.meta.url) as unknown as string),
-          loader.load(new URL('../assets/question_empty.jpg', import.meta.url) as unknown as string),
-          loader.load(new URL('../assets/question_symbol.jpg', import.meta.url) as unknown as string),
-          loader.load(new URL('../assets/question_symbol.jpg', import.meta.url) as unknown as string),
-        ];
-        const materials = textures.map(texture => new THREE.MeshBasicMaterial({ map: texture }));
-        const geometry = new THREE.BoxGeometry(2.5, 2.5, 2.5);
-        const cube = new THREE.Mesh(geometry, materials);
-        cube.position.set(block.position.x, block.position.y, block.position.z);
-        scene.add(cube);
-        break;
-      }
-
-      case 'coin': {
-        const material = new THREE.MeshBasicMaterial({ color: 0xffff00 });
-        const geometry = new THREE.CylinderGeometry(1.25, 1.25, 0.1, 32);
-        const coin = new THREE.Mesh(geometry, material);
-        coin.position.set(block.position.x, block.position.y, block.position.z);
-        coin.rotation.x = Math.PI / 2;
-        scene.add(coin);
-        break;
-      }
-    
+      case 'brick': setBrickBlock(block, scene); break;
+      case 'question': setQuestionBlock(block, scene); break;
+      case 'coin': setCoinBlock(block, scene); break;
       default:
         break;
     }
@@ -282,13 +183,13 @@ const movePlayer = (player: UserModel, frame: number, camera: THREE.PerspectiveC
   if (isFocused.value) {
     if (uiStore.controls.up) {
       // model.position.z -= 0.1
-        // Calculate the forward vector
-        const forward = new THREE.Vector3();
-        model.getWorldDirection(forward);
-        forward.multiplyScalar(config.speed.move * 0.01);
+      // Calculate the forward vector
+      const forward = new THREE.Vector3();
+      model.getWorldDirection(forward);
+      forward.multiplyScalar(config.speed.move * 0.01);
 
-        // Add the forward vector to the model's position
-        model.position.add(forward);
+      // Add the forward vector to the model's position
+      model.position.add(forward);
     }
     if (uiStore.controls.down) {
       // model.position.z += 0.1
@@ -406,7 +307,7 @@ const onConfigUpdate = ({ key, config }: { key: string, config: Record<string, a
 /**
  * Set key state based on the touch direction
  */
-const onMoved = ((direction: BidimensionalCoords | void) => {
+const onTouchMoved = ((direction: BidimensionalCoords | void) => {
   if (!direction) {
     uiStore.controls.up = false;
     uiStore.controls.down = false;
@@ -469,8 +370,8 @@ const init = async(canvas: HTMLCanvasElement) => {
       style="left: 25px; bottom: 25px;"
       ref="touchControlInside"
       class="touch-control"
-      @moved="onMoved"
-      @touchend="onMoved"
+      @moved="onTouchMoved"
+      @touchend="onTouchMoved"
     />
     <TouchControl
       style="right: 25px; bottom: 25px;"

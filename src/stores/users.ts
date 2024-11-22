@@ -6,7 +6,7 @@ import { throttle } from 'lodash'
 const getName = (state: any) =>
   getStorageItem(state, 'name') || `Guest${Math.floor(Math.random() * 1000)}`
 
-const defaultUser = () =>
+const getDefaultUser = () =>
   ({
     id: Date.now().toString(),
     name: '',
@@ -22,32 +22,35 @@ const defaultUser = () =>
     }
   }) as User
 
+const getBlocks = () =>
+  [
+    { type: 'coin', position: { x: -25, y: 6, z: -5 } },
+
+    { type: 'question', position: { x: -20, y: 6, z: -5 } },
+
+    { type: 'brick', position: { x: -27.5, y: 1, z: -5 } },
+
+    { type: 'brick', position: { x: 5, y: 1, z: -5 } },
+    { type: 'brick', position: { x: 7.5, y: 1, z: -5 } },
+    { type: 'brick', position: { x: 10, y: 1, z: -5 } },
+    { type: 'brick', position: { x: 12.5, y: 1, z: -5 } },
+    { type: 'brick', position: { x: 15, y: 1, z: -5 } },
+    { type: 'brick', position: { x: 17.5, y: 1, z: -5 } },
+    { type: 'brick', position: { x: 20, y: 1, z: -5 } },
+
+    { type: 'brick', position: { x: 7.5, y: 3.5, z: -5 } },
+    { type: 'brick', position: { x: 10, y: 3.5, z: -5 } },
+    { type: 'brick', position: { x: 12.5, y: 3.5, z: -5 } },
+    { type: 'brick', position: { x: 15, y: 3.5, z: -5 } },
+    { type: 'brick', position: { x: 17.5, y: 3.5, z: -5 } }
+  ] as GameBlock[]
+
 export const useUsersStore = defineStore('user', {
   state: () => ({
     users: [] as User[],
-    user: defaultUser(),
+    user: getDefaultUser(),
     messages: [] as Message[],
-    blocks: [
-      { type: 'coin', position: { x: -25, y: 6, z: -5 } },
-
-      { type: 'question', position: { x: -20, y: 6, z: -5 } },
-
-      { type: 'brick', position: { x: -27.5, y: 1, z: -5 } },
-
-      { type: 'brick', position: { x: 5, y: 1, z: -5 } },
-      { type: 'brick', position: { x: 7.5, y: 1, z: -5 } },
-      { type: 'brick', position: { x: 10, y: 1, z: -5 } },
-      { type: 'brick', position: { x: 12.5, y: 1, z: -5 } },
-      { type: 'brick', position: { x: 15, y: 1, z: -5 } },
-      { type: 'brick', position: { x: 17.5, y: 1, z: -5 } },
-      { type: 'brick', position: { x: 20, y: 1, z: -5 } },
-
-      { type: 'brick', position: { x: 7.5, y: 3.5, z: -5 } },
-      { type: 'brick', position: { x: 10, y: 3.5, z: -5 } },
-      { type: 'brick', position: { x: 12.5, y: 3.5, z: -5 } },
-      { type: 'brick', position: { x: 15, y: 3.5, z: -5 } },
-      { type: 'brick', position: { x: 17.5, y: 3.5, z: -5 } }
-    ] as GameBlock[]
+    blocks: getBlocks()
   }),
 
   actions: {
@@ -71,7 +74,7 @@ export const useUsersStore = defineStore('user', {
 
     createUser(name: string) {
       const user: User = {
-        ...defaultUser(),
+        ...getDefaultUser(),
         name
       }
       this.user = user

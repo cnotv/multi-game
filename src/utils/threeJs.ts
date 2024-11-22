@@ -1,5 +1,38 @@
 import * as THREE from 'three'
 import RAPIER, { RigidBody } from '@dimforge/rapier3d'
+import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js'
+import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js'
+
+export const config = {
+  velocityY: 0,
+  gravity: 25,
+  worldSize: 500,
+  fov: 60,
+  aspect: window.innerWidth / window.innerHeight,
+  near: 1.0,
+  far: 1000.0,
+  showHelpers: false,
+  speed: {
+    move: 40,
+    rotate: 5,
+    jump: 45
+  },
+  offset: {
+    x: 0,
+    y: 4,
+    z: -22
+  },
+  lookAt: {
+    x: 0,
+    y: 10,
+    z: 50
+  },
+  light: {
+    intensity: 50,
+    distance: 0,
+    decay: 2
+  }
+}
 
 /**
  * Remove all the models types from the scene
@@ -128,4 +161,68 @@ export const loadLights = (scene: THREE.Scene) => {
 
   const ambientLight = new THREE.AmbientLight(0xffffff, 0.25)
   scene.add(ambientLight)
+}
+
+/**
+ * Add fonts on top of the model
+ */
+export const loadFonts = (model: Model, name: string) => {
+  // Load the font
+  const loader = new FontLoader()
+  const fontFile = new URL('../assets/Lato_Regular.json', import.meta.url) as unknown as string
+
+  loader.load(fontFile, function (font: any) {
+    // Create a TextGeometry with the user name
+    const geometry = new TextGeometry(name, {
+      font: font,
+      size: 0.2,
+      depth: 0.1
+    })
+
+    // Add the TextGeometry to the model
+    const material = new THREE.MeshStandardMaterial({ color: 0xffffff })
+    const text = new THREE.Mesh(geometry, material)
+    // text.position.z = 0.5;
+    text.position.y = 0.7
+    text.position.x = -0.35
+    model.add(text)
+  })
+}
+
+export const setBrickBlock = (block: GameBlock, scene: THREE.Scene) => {
+  const loader = new THREE.TextureLoader()
+  const texture = loader.load(new URL('../assets/brick.jpg', import.meta.url) as unknown as string)
+  const material = new THREE.MeshBasicMaterial({ map: texture })
+  const geometry = new THREE.BoxGeometry(2.5, 2.5, 2.5)
+  const cube = new THREE.Mesh(geometry, material)
+  cube.position.set(block.position.x, block.position.y, block.position.z)
+  scene.add(cube)
+}
+
+export const setCoinBlock = (block: GameBlock, scene: THREE.Scene) => {
+  const material = new THREE.MeshBasicMaterial({ color: 0xffff00 })
+  const geometry = new THREE.CylinderGeometry(1.25, 1.25, 0.1, 32)
+  const coin = new THREE.Mesh(geometry, material)
+  coin.position.set(block.position.x, block.position.y, block.position.z)
+  coin.rotation.x = Math.PI / 2
+  scene.add(coin)
+}
+
+export const setQuestionBlock = (block: GameBlock, scene: THREE.Scene) => {
+  const loader = new THREE.TextureLoader()
+
+  // Load the textures
+  const textures = [
+    loader.load(new URL('../assets/question_symbol.jpg', import.meta.url) as unknown as string),
+    loader.load(new URL('../assets/question_symbol.jpg', import.meta.url) as unknown as string),
+    loader.load(new URL('../assets/question_empty.jpg', import.meta.url) as unknown as string),
+    loader.load(new URL('../assets/question_empty.jpg', import.meta.url) as unknown as string),
+    loader.load(new URL('../assets/question_symbol.jpg', import.meta.url) as unknown as string),
+    loader.load(new URL('../assets/question_symbol.jpg', import.meta.url) as unknown as string)
+  ]
+  const materials = textures.map((texture) => new THREE.MeshBasicMaterial({ map: texture }))
+  const geometry = new THREE.BoxGeometry(2.5, 2.5, 2.5)
+  const cube = new THREE.Mesh(geometry, materials)
+  cube.position.set(block.position.x, block.position.y, block.position.z)
+  scene.add(cube)
 }
