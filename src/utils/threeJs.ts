@@ -189,17 +189,30 @@ export const loadFonts = (model: Model, name: string) => {
   })
 }
 
-export const setBrickBlock = (block: GameBlock, scene: THREE.Scene) => {
+export const setBrickBlock = (block: GameBlock, scene: THREE.Scene, world: RAPIER.World) => {
+  const position: CoordinateTuple = [block.position.x, block.position.y, block.position.z]
   const loader = new THREE.TextureLoader()
+  const size = [2.5, 2.5, 2.5]
   const texture = loader.load(new URL('../assets/brick.jpg', import.meta.url) as unknown as string)
   const material = new THREE.MeshBasicMaterial({ map: texture })
-  const geometry = new THREE.BoxGeometry(2.5, 2.5, 2.5)
+  const geometry = new THREE.BoxGeometry(...size)
   const cube = new THREE.Mesh(geometry, material)
-  cube.position.set(block.position.x, block.position.y, block.position.z)
+  cube.position.set(...position)
   scene.add(cube)
+
+  // Create a dynamic rigid-body.
+  let rigidBodyDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(...position)
+  let rigidBody = world.createRigidBody(rigidBodyDesc)
+  rigidBody.setRotation({ w: 1.0, x: 0.5, y: 0.5, z: 0.5 }, true)
+
+  // Create a cuboid collider attached to the dynamic rigidBody.
+  let colliderDesc = RAPIER.ColliderDesc.cuboid(...(size.map((x) => x * 0.6) as CoordinateTuple))
+  let collider = world.createCollider(colliderDesc, rigidBody)
+
+  return { model: cube, rigidBody, collider }
 }
 
-export const setCoinBlock = (block: GameBlock, scene: THREE.Scene) => {
+export const setCoinBlock = (block: GameBlock, scene: THREE.Scene, world: RAPIER.World) => {
   const material = new THREE.MeshBasicMaterial({ color: 0xffff00 })
   const geometry = new THREE.CylinderGeometry(1.25, 1.25, 0.1, 32)
   const coin = new THREE.Mesh(geometry, material)
@@ -208,18 +221,17 @@ export const setCoinBlock = (block: GameBlock, scene: THREE.Scene) => {
   scene.add(coin)
 }
 
-export const setQuestionBlock = (block: GameBlock, scene: THREE.Scene) => {
+export const setQuestionBlock = (block: GameBlock, scene: THREE.Scene, world: RAPIER.World) => {
   const loader = new THREE.TextureLoader()
+  const question = loader.load(
+    new URL('../assets/question_symbol.jpg', import.meta.url) as unknown as string
+  )
+  const empty = loader.load(
+    new URL('../assets/question_empty.jpg', import.meta.url) as unknown as string
+  )
 
   // Load the textures
-  const textures = [
-    loader.load(new URL('../assets/question_symbol.jpg', import.meta.url) as unknown as string),
-    loader.load(new URL('../assets/question_symbol.jpg', import.meta.url) as unknown as string),
-    loader.load(new URL('../assets/question_empty.jpg', import.meta.url) as unknown as string),
-    loader.load(new URL('../assets/question_empty.jpg', import.meta.url) as unknown as string),
-    loader.load(new URL('../assets/question_symbol.jpg', import.meta.url) as unknown as string),
-    loader.load(new URL('../assets/question_symbol.jpg', import.meta.url) as unknown as string)
-  ]
+  const textures = [question, question, empty, empty, question, question]
   const materials = textures.map((texture) => new THREE.MeshBasicMaterial({ map: texture }))
   const geometry = new THREE.BoxGeometry(2.5, 2.5, 2.5)
   const cube = new THREE.Mesh(geometry, materials)

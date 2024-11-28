@@ -11,7 +11,7 @@ import RAPIER from '@dimforge/rapier3d'
 
 const gravity = new RAPIER.Vector3(0.0, -9.81, 0.0)
 const world = new RAPIER.World(gravity)
-const dynamicBodies: Record<'ground' | 'characters' | 'blocks', [THREE.Object3D, RAPIER.RigidBody][]> = {
+const dynamicBodies: Record<BlockTypes, PhysicObject[]> = {
   characters: [],
   ground: [],
   blocks: []
@@ -115,16 +115,18 @@ const setModel = async (scene: THREE.Scene): Promise<UserModel> => {
   scene.add(model);
 
   // Create a dynamic rigid body for the model
-  const modelBodyDesc = RAPIER.RigidBodyDesc.newDynamic().setTranslation(model.position.x, model.position.y, model.position.z);
-  const modelBody = world.createRigidBody(modelBodyDesc);
-  const modelBodyHandle = world.createRigidBody(modelBodyDesc);
+  const modelPosition = [model.position.x, model.position.y, model.position.z] as CoordinateTuple;
+  let rigidBodyDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(...modelPosition)
+  let rigidBody = world.createRigidBody(rigidBodyDesc)
+  rigidBody.setRotation(model.rotation, true)
 
-  // Create a collider for the model
-  const modelColliderDesc = RAPIER.ColliderDesc.cuboid(0.03, 0.03, 0.03);
-  world.createCollider(modelColliderDesc, modelBodyHandle);
+  // Create a cuboid collider attached to the dynamic rigidBody.
+  const scaledSize = [model.with, model.innerHeight, model.deep].map((x) => x * 0.6) as CoordinateTuple
+  let colliderDesc = RAPIER.ColliderDesc.cuboid(...(scaledSize as CoordinateTuple))
+  let collider = world.createCollider(colliderDesc, rigidBody)
 
   // Store the model and its rigid body for later use
-  dynamicBodies.characters.push([model, modelBody]);
+  dynamicBodies.characters.push({ model, rigidBody, collider });
 
   return {model, mixer, status: {}};
 }
@@ -143,12 +145,17 @@ const setPlayers = async (scene: THREE.Scene): Promise<Record<string, UserModel>
 
 const setBlocks = (scene: THREE.Scene) => {
   userStore.blocks.forEach((block) => {
+    let model, rigidBody, collider;
     switch (block.type) {
-      case 'brick': setBrickBlock(block, scene); break;
-      case 'question': setQuestionBlock(block, scene); break;
-      case 'coin': setCoinBlock(block, scene); break;
+      case 'brick': ({ model, rigidBody, collider } = setBrickBlock(block, scene, world)); break;
+      case 'question': setQuestionBlock(block, scene, world); break;
+      case 'coin': setCoinBlock(block, scene, world); break;
       default:
         break;
+    }
+
+    if (model && rigidBody) {
+      dynamicBodies.blocks.push({ model, rigidBody, collider });
     }
   });
 }
@@ -252,7 +259,7 @@ const movePlayer = (player: UserModel, frame: number, camera: THREE.PerspectiveC
 const loadEnv = (scene: THREE.Scene) => {
   const loader = new THREE.TextureLoader();
   const groundData = loadGround(scene, loader, config, '../assets/grass2.jpg', world)
-  dynamicBodies.ground.push(groundData)
+  dynamicBodies.ground.push(groundData as any)
   loadSky(scene, loader, config, '../assets/landscape.jpg');
 }
 
@@ -345,11 +352,11 @@ const init = async(canvas: HTMLCanvasElement) => {
       world.step();
 
       // Update the position and rotation of your objects based on the physics simulation
-      dynamicBodies.characters.forEach(([object, body]) => {
-        // const translation = body.translation();
-        // object.position.set(translation.x, translation.y, translation.z);
-        // const rotation = body.rotation();
-        // object.quaternion.set(rotation.x, rotation.y, rotation.z, rotation.w);
+      dynamicBodies.characters.forEach(({ model, rigidBody }) => {
+        // const position = rigidBody.translation();
+        // model.position.set(position.x, position.y, position.z);
+        // const rotation = rigidBody.rotation();
+        // model.rotation.set(rotation.x, rotation.y, rotation.z);
       });
 
       renderer.render( scene, camera );
