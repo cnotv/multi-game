@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import * as THREE from 'three';
-import { ref, onMounted, onUnmounted, watch } from 'vue';
+import { ref, onMounted, onUnmounted, watch, h } from 'vue';
 import { useUsersStore } from "@/stores/users";
 import { useUiStore } from "@/stores/ui";
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import Controls from '@/components/Controls.vue'
 import TouchControl from '@/components/TouchControl.vue'
-import { resetModels, loadGround, loadSky, setThirdPersonCamera, loadLights, config, setBrickBlock, setQuestionBlock, setCoinBlock } from '@/utils/threeJs';
+import { resetModels, loadGround, loadSky, setThirdPersonCamera, loadLights, config, setBrickBlock, setQuestionBlock, setCoinBlock, setModel } from '@/utils/threeJs';
 import RAPIER from '@dimforge/rapier3d'
 
 const gravity = new RAPIER.Vector3(0.0, -9.81, 0.0)
@@ -54,11 +53,11 @@ watch(() => userStore.users, async (newValue) => {
       const cube = players[user.id];
       if (!cube) {
         resetModels(scene)
-        setModel(scene).then(cube => {
+        setModel(scene, world, dynamicBodies).then(cube => {
           players[user.id] = cube;
         });
         // TODO: Avoid to create a new player and remove models by ID
-        player = await setModel(scene);
+        player = await setModel(scene, world, dynamicBodies);
         // loadFonts(player.model, userStore.user.name);
       } else {
         updatePosition(cube, user, frame);
@@ -66,18 +65,6 @@ watch(() => userStore.users, async (newValue) => {
     });
   }
 })
-
-/**
- * Return threeJS valid 3D model
- */
-const loadModel = (): Promise<{ model: Model, gltf: any}> => {
-  return new Promise((resolve, reject) => {
-    const loader = new GLTFLoader();
-    loader.load('goomba.glb', (gltf) => {
-      resolve({model: gltf.scene, gltf});
-    }, undefined, reject);
-  });
-}
 
 const playAnimationModel = (mixer: THREE.AnimationMixer, frame: number) => {
   if (mixer) {
@@ -94,50 +81,13 @@ const resetAnimationModel = (mixer: THREE.AnimationMixer) => {
   } 
 } 
 
-const setAnimationModel = (mixer: THREE.AnimationMixer, model: Model, gltf: any) => {
-  // Flip the model
-  model.rotateOnAxis(new THREE.Vector3(0, 1, 0), Math.PI);
-  const action = mixer.clipAction(gltf.animations[0]);
-  action.play();
-  mixer.timeScale = 0;
-}
-
-/**
- * Generate model with predefined information (e.g. position) and add it to the scene
- */
-const setModel = async (scene: THREE.Scene): Promise<UserModel> => {
-  // Load the model
-  const {model, gltf} = await loadModel();
-  // Create an AnimationMixer and set the first animation to play
-  const mixer = new THREE.AnimationMixer(model)
-  model.scale.set(0.03, 0.03, 0.03);
-  setAnimationModel(mixer, model, gltf);
-  scene.add(model);
-
-  // Create a dynamic rigid body for the model
-  const modelPosition = [model.position.x, model.position.y, model.position.z] as CoordinateTuple;
-  let rigidBodyDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(...modelPosition)
-  let rigidBody = world.createRigidBody(rigidBodyDesc)
-  rigidBody.setRotation(model.rotation, true)
-
-  // Create a cuboid collider attached to the dynamic rigidBody.
-  const scaledSize = [model.with, model.innerHeight, model.deep].map((x) => x * 0.6) as CoordinateTuple
-  let colliderDesc = RAPIER.ColliderDesc.cuboid(...(scaledSize as CoordinateTuple))
-  let collider = world.createCollider(colliderDesc, rigidBody)
-
-  // Store the model and its rigid body for later use
-  dynamicBodies.characters.push({ model, rigidBody, collider });
-
-  return {model, mixer, status: {}};
-}
-
 /**
  * Generate all the models for the users and add them to the scene
  */
 const setPlayers = async (scene: THREE.Scene): Promise<Record<string, UserModel>> => {
   const players = userStore.users.reduce(async (acc, user) => ({
     ...acc,
-    [user.id]: setModel(scene)
+    [user.id]: setModel(scene, world, dynamicBodies)
   }), {});
 
   return players;
@@ -173,13 +123,7 @@ const updatePosition = (cube: UserModel, user: User, frame: number) => {
       model.rotation.set(user.rotation._x, user.rotation._y, user.rotation._z);
     } 
   }
-  // const oldMovement = JSON.stringify(user.position) + JSON.stringify(user.rotation);
-  // const newMovement = JSON.stringify(model.position) + JSON.stringify(model.rotation);
-  // if (oldMovement !== newMovement) {
-    playAnimationModel(mixer, frame);
-  // } else {
-    // resetAnimationModel(mixer);
-  // }
+  playAnimationModel(mixer, frame);
 }
 
 /**
@@ -288,8 +232,11 @@ const onConfigUpdate = ({ key, config }: { key: string, config: Record<string, a
 
   if (key === 'showHelpers') {
     if (config.showHelpers) {
+      // Camera helper
       const helper = new THREE.CameraHelper(globalCamera);
       scene.add(helper);
+
+      // Ground helper
       const axesHelper = new THREE.AxesHelper(500);
       scene.add(axesHelper);
     } else {
@@ -337,7 +284,7 @@ const init = async(canvas: HTMLCanvasElement) => {
     loadLights(scene);
     resetModels(scene)
     players = await setPlayers(scene);
-    player = await setModel(scene);
+    player = await setModel(scene, world, dynamicBodies);
     // loadFonts(player.model, userStore.user.name);
     loadEnv(scene);
     setBlocks(scene);
@@ -348,17 +295,18 @@ const init = async(canvas: HTMLCanvasElement) => {
         movePlayer(player, frame, camera);
       }
 
-      // Step the physics simulation forward
-      world.step();
-
       // Update the position and rotation of your objects based on the physics simulation
-      dynamicBodies.characters.forEach(({ model, rigidBody }) => {
-        // const position = rigidBody.translation();
-        // model.position.set(position.x, position.y, position.z);
-        // const rotation = rigidBody.rotation();
-        // model.rotation.set(rotation.x, rotation.y, rotation.z);
+      dynamicBodies.characters.forEach(({ model, rigidBody, helper }) => {
+        // HELPERS: Update model body position
+        if (config.showBodyHelpers) {
+          helper.position.set(model.position.x, model.position.y, model.position.z);
+          helper.rotation.set(model.rotation.x, model.rotation.y, model.rotation.z);
+          helper.update();
+        }
       });
 
+      // Step the physics simulation forward
+      world.step();
       renderer.render( scene, camera );
     }
     animate();

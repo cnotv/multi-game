@@ -21,5 +21,6 @@ type BlockTypes = 'ground' | 'characters' | 'blocks'
 type PhysicObject = {
   model: THREE.Object3D
   rigidBody: RAPIER.RigidBody
+  helper: THREE.Object3D
   collider: RAPIER.Collider
 }
