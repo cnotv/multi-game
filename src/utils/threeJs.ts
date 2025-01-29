@@ -211,18 +211,19 @@ const loadModel = (): Promise<{ model: Model; gltf: any }> => {
   })
 }
 
-const setAnimationModel = (mixer: THREE.AnimationMixer, model: Model, gltf: any) => {
+const getAnimationsModel = (mixer: THREE.AnimationMixer, model: Model, gltf: any) => {
   // Flip the model
   model.rotateOnAxis(new THREE.Vector3(0, 1, 0), Math.PI)
-  const action = mixer.clipAction(gltf.animations[0])
-  action.play()
-  mixer.timeScale = 0
+  // action.play()
+  return {
+    run: mixer.clipAction(gltf.animations[0])
+  }
 }
 
 /**
  * Generate model with predefined information (e.g. position) and add it to the scene
  */
-export const setModel = async (
+export const getModel = async (
   scene: THREE.Scene,
   world: RAPIER.World,
   dynamicBodies: Record<BlockTypes, PhysicObject[]>
@@ -233,7 +234,7 @@ export const setModel = async (
   // ANIMATION: Create an AnimationMixer and set the first animation to play
   const mixer = new THREE.AnimationMixer(model)
   model.scale.set(0.03, 0.03, 0.03)
-  setAnimationModel(mixer, model, gltf)
+  const actions = getAnimationsModel(mixer, model, gltf)
   scene.add(model)
 
   // PHYSIC: Create a dynamic rigid body for the model
@@ -261,7 +262,7 @@ export const setModel = async (
   // PHYSIC: Store the model and its rigid body for later use
   dynamicBodies.characters.push({ model, rigidBody, collider, helper })
 
-  return { model, mixer, status: {} }
+  return { model, mixer, status: {}, actions }
 }
 
 export const setBrickBlock = (block: GameBlock, scene: THREE.Scene, world: RAPIER.World) => {

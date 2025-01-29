@@ -9,4 +9,5 @@ type UserModel = {
   status: {
     jumping?: boolean
   }
+  actions: Record<string, THREE.AnimationAction>
 }

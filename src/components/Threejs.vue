@@ -5,7 +5,7 @@ import { useUsersStore } from "@/stores/users";
 import { useUiStore } from "@/stores/ui";
 import Controls from '@/components/Controls.vue'
 import TouchControl from '@/components/TouchControl.vue'
-import { resetModels, loadGround, loadSky, setThirdPersonCamera, loadLights, config, setBrickBlock, setQuestionBlock, setCoinBlock, setModel } from '@/utils/threeJs';
+import { resetModels, loadGround, loadSky, setThirdPersonCamera, loadLights, config, setBrickBlock, setQuestionBlock, setCoinBlock, getModel } from '@/utils/threeJs';
 import RAPIER from '@dimforge/rapier3d'
 
 const gravity = new RAPIER.Vector3(0.0, -9.81, 0.0)
@@ -24,7 +24,7 @@ const canvas = ref(null)
 let scene: THREE.Scene;
 let players: Record<string, UserModel> = {};
 let player: UserModel | null = null;
-let frame: number = 0;
+let delta: number = 0;
 let globalCamera: THREE.PerspectiveCamera;
 
 onMounted(async() => {
@@ -53,33 +53,18 @@ watch(() => userStore.users, async (newValue) => {
       const cube = players[user.id];
       if (!cube) {
         resetModels(scene)
-        setModel(scene, world, dynamicBodies).then(cube => {
+        getModel(scene, world, dynamicBodies).then(cube => {
           players[user.id] = cube;
         });
         // TODO: Avoid to create a new player and remove models by ID
-        player = await setModel(scene, world, dynamicBodies);
+        player = await getModel(scene, world, dynamicBodies);
         // loadFonts(player.model, userStore.user.name);
       } else {
-        updatePosition(cube, user, frame);
+        updatePosition(cube, user, delta);
       }
     });
   }
 })
-
-const playAnimationModel = (mixer: THREE.AnimationMixer, frame: number) => {
-  if (mixer) {
-    mixer.timeScale = 1;
-    if (frame % 6 === 0) {
-      mixer.update(frame / 2);
-    }
-  }
-} 
-
-const resetAnimationModel = (mixer: THREE.AnimationMixer) => {
-  if (mixer) {
-    mixer.timeScale = 0;
-  } 
-} 
 
 /**
  * Generate all the models for the users and add them to the scene
@@ -87,7 +72,7 @@ const resetAnimationModel = (mixer: THREE.AnimationMixer) => {
 const setPlayers = async (scene: THREE.Scene): Promise<Record<string, UserModel>> => {
   const players = userStore.users.reduce(async (acc, user) => ({
     ...acc,
-    [user.id]: setModel(scene, world, dynamicBodies)
+    [user.id]: getModel(scene, world, dynamicBodies)
   }), {});
 
   return players;
@@ -111,10 +96,30 @@ const setBlocks = (scene: THREE.Scene) => {
 }
 
 /**
- * Update the position of the cube
+ * Update the animation of the model based on given time
  */
-const updatePosition = (cube: UserModel, user: User, frame: number) => {
-  const { model, mixer } = cube;
+const updateAnimation = (
+  mixer: THREE.AnimationMixer,
+  actions: Record<string, THREE.AnimationAction>,
+  delta: number = 0,
+  speed: number = 0
+) => {
+  const coefficient = 0.1;
+  // const clip = mixer.clipAction();
+  // const action = mixer.clipAction(clip);
+  if (delta) {
+    mixer.update(delta * speed * coefficient);
+    actions.run.play();
+  } else {
+    actions.run.stop();
+  }
+}
+
+/**
+ * Update the position of the character
+ */
+const updatePosition = (character: UserModel, user: User, delta: number) => {
+  const { model, mixer, actions } = character;
   if (model) {
     if (user.position && model.position) {
       model.position.set(user.position.x, user.position.y, user.position.z);
@@ -123,14 +128,14 @@ const updatePosition = (cube: UserModel, user: User, frame: number) => {
       model.rotation.set(user.rotation._x, user.rotation._y, user.rotation._z);
     } 
   }
-  playAnimationModel(mixer, frame);
+  updateAnimation(mixer, actions, delta, config.speed.move);
 }
 
 /**
  * Move the player and emit new scene information
  */
-const movePlayer = (player: UserModel, frame: number, camera: THREE.PerspectiveCamera) => {
-  const { model, mixer } = player;
+const movePlayer = (player: UserModel, delta: number, camera: THREE.PerspectiveCamera) => {
+  const { model, mixer, actions } = player;
   if (isFocused.value) {
     if (uiStore.controls.up) {
       // model.position.z -= 0.1
@@ -168,7 +173,7 @@ const movePlayer = (player: UserModel, frame: number, camera: THREE.PerspectiveC
       }
     }
 
-    if (mixer) {
+    if (mixer && actions) {
       if ([
         'left',
         'right',
@@ -176,12 +181,12 @@ const movePlayer = (player: UserModel, frame: number, camera: THREE.PerspectiveC
         'down',
         'jump',
       ].some(action => uiStore.controls[action])) {
-        playAnimationModel(mixer, frame)
+        updateAnimation(mixer, actions, delta, config.speed.move);
         
         // For some reason the rotation is reported as Euler type but it's not
         userStore.updateUserData({ position: model.position, rotation: model.rotation });
       } else {
-        resetAnimationModel(mixer)
+        updateAnimation(mixer, actions);
       }
     } 
   }
@@ -279,20 +284,26 @@ const onTouchMoved = ((direction: BidimensionalCoords | void) => {
  
 const init = async(canvas: HTMLCanvasElement) => {
   const setup = async () => {
+    // SETUP
     const { scene, renderer, camera } = loadScene(canvas);
+    const clock = new THREE.Clock();
     window.addEventListener('resize', onBrowserResize.bind(null, camera, renderer))
     loadLights(scene);
+
+    // POPULATE
     resetModels(scene)
     players = await setPlayers(scene);
-    player = await setModel(scene, world, dynamicBodies);
+    player = await getModel(scene, world, dynamicBodies);
     // loadFonts(player.model, userStore.user.name);
     loadEnv(scene);
     setBlocks(scene);
     
     function animate() {
-      frame = requestAnimationFrame(animate);
+      requestAnimationFrame(animate);
+      delta = clock.getDelta();
+
       if (player) {
-        movePlayer(player, frame, camera);
+        movePlayer(player, delta, camera);
       }
 
       // Update the position and rotation of your objects based on the physics simulation
