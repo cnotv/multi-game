@@ -6,7 +6,7 @@ export const state = reactive({
 })
 
 // "undefined" means the URL will be computed from the `window.location` object
-const URL = `http://104.248.253.167:3000`
+const URL = import.meta.env.VITE_APP_SERVER_URL
 export const socket = io(URL)
 
 socket.on('connect', () => {
