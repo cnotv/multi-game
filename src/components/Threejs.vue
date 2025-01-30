@@ -5,7 +5,7 @@ import { useUsersStore } from "@/stores/users";
 import { useUiStore } from "@/stores/ui";
 import Controls from '@/components/Controls.vue'
 import TouchControl from '@/components/TouchControl.vue'
-import { resetModels, loadGround, loadSky, setThirdPersonCamera, loadLights, config, setBrickBlock, setQuestionBlock, setCoinBlock, getModel } from '@/utils/threeJs';
+import { resetModels, getGround, loadSky, setThirdPersonCamera, loadLights, config, setBrickBlock, setQuestionBlock, setCoinBlock, getModel } from '@/utils/threeJs';
 import RAPIER from '@dimforge/rapier3d'
 
 const gravity = new RAPIER.Vector3(0.0, -9.81, 0.0)
@@ -207,8 +207,7 @@ const movePlayer = (player: UserModel, delta: number, camera: THREE.PerspectiveC
 
 const loadEnv = (scene: THREE.Scene) => {
   const loader = new THREE.TextureLoader();
-  const groundData = loadGround(scene, loader, config, '../assets/grass2.jpg', world)
-  dynamicBodies.ground.push(groundData as any)
+  getGround(scene, loader, config, '../assets/grass2.jpg', world, dynamicBodies)
   loadSky(scene, loader, config, '../assets/landscape.jpg');
 }
 
@@ -297,6 +296,8 @@ const init = async(canvas: HTMLCanvasElement) => {
     // loadFonts(player.model, userStore.user.name);
     loadEnv(scene);
     setBlocks(scene);
+
+    userStore.dynamicBodies = dynamicBodies;
     
     function animate() {
       requestAnimationFrame(animate);

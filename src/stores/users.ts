@@ -50,7 +50,8 @@ export const useUsersStore = defineStore('user', {
     users: [] as User[],
     user: getDefaultUser(),
     messages: [] as Message[],
-    blocks: getBlocks()
+    blocks: getBlocks(),
+    dynamicBodies: {} as Record<BlockTypes, PhysicObject[]>
   }),
 
   actions: {

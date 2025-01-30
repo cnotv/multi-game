@@ -48,14 +48,15 @@ export const resetModels = (scene: THREE.Scene) => {
   }
 }
 
-export const loadGround = (
+export const getGround = (
   scene: THREE.Scene,
   loader: THREE.TextureLoader,
   config: any,
   path: string,
-  world: RAPIER.World
-): [THREE.Object3D, RAPIER.RigidBody] => {
-  const groundGeometry = new THREE.PlaneGeometry(config.worldSize, config.worldSize)
+  world: RAPIER.World,
+  dynamicBodies: Record<BlockTypes, PhysicObject[]>
+): THREE.Object3D => {
+  const geometry = new THREE.PlaneGeometry(config.worldSize, config.worldSize)
   const groundTexture = loader.load(new URL(path, import.meta.url) as unknown as string)
 
   // Repeat the texture
@@ -63,36 +64,27 @@ export const loadGround = (
   groundTexture.wrapT = THREE.RepeatWrapping
   groundTexture.repeat.set(10, 10) // Repeat the texture 10 times in both directions
 
-  const groundMaterial = new THREE.MeshBasicMaterial({ map: groundTexture })
-  const ground = new THREE.Mesh(groundGeometry, groundMaterial)
+  const material = new THREE.MeshBasicMaterial({ map: groundTexture })
+  const ground = new THREE.Mesh(geometry, material)
   ground.rotation.x = -Math.PI / 2 // Rotate the ground to make it horizontal
-  ground.position.y = -0.5
+  ground.position.set(1, -1, 1)
   scene.add(ground)
 
   // PHYSIC: Create a static rigid body for the ground
-  const groundBodyDesc = RAPIER.RigidBodyDesc.newStatic()
-  const groundBody = world.createRigidBody(groundBodyDesc)
-  const groundBodyHandle = world.createRigidBody(groundBodyDesc)
-
-  // Create a collider for the ground
-  // const groundColliderDesc = RAPIER.ColliderDesc.cuboid(500, 1, 500)
-
-  // Create a collider for the ground
-  const groundColliderDesc = RAPIER.ColliderDesc.cuboid(500, 1, 500)
-  const groundColliderHandle = world.createCollider(groundColliderDesc, groundBodyHandle)
+  const rigidBodyDesc = RAPIER.RigidBodyDesc.fixed()
+  const rigidBody = world.createRigidBody(rigidBodyDesc)
+  const colliderDesc = RAPIER.ColliderDesc.cuboid(500, 1, 500)
+  const collider = world.createCollider(colliderDesc, rigidBody)
 
   // HELPER: Create a mesh to visualize the collider
+  const helper = new THREE.BoxHelper(ground, 0x000000)
   if (config.showBodyHelpers) {
-    const groundColliderGeometry = new THREE.BoxGeometry(500, 1, 500)
-    const groundColliderMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000, wireframe: true })
-    const groundColliderMesh = new THREE.Mesh(groundColliderGeometry, groundColliderMaterial)
-    scene.add(groundColliderMesh)
+    scene.add(helper)
   }
 
-  world.createCollider(groundColliderDesc, groundBodyHandle)
+  dynamicBodies.ground.push({ model: ground, rigidBody, helper, collider })
 
-  // Return the ground and its rigid body for later use
-  return [ground, groundBody]
+  return ground
 }
 
 export const loadSky = (
@@ -234,6 +226,7 @@ export const getModel = async (
   // ANIMATION: Create an AnimationMixer and set the first animation to play
   const mixer = new THREE.AnimationMixer(model)
   model.scale.set(0.03, 0.03, 0.03)
+  model.position.y = 1
   const actions = getAnimationsModel(mixer, model, gltf)
   scene.add(model)
 
