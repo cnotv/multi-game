@@ -21,6 +21,26 @@ type BlockTypes = 'ground' | 'characters' | 'blocks'
 type PhysicObject = {
   model: THREE.Object3D
   rigidBody: RAPIER.RigidBody
-  helper: THREE.Object3D
+  helper?: THREE.Object3D
   collider: RAPIER.Collider
+}
+
+interface ModelOptions {
+  position?: CoordinateTuple
+  scale?: CoordinateTuple
+  size?: number | CoordinateTuple
+  rotation?: CoordinateTuple
+  textures?: {
+    random: boolean
+    list: THREE.Texture[]
+  }
+}
+
+interface PhysicOptions {
+  boundary?: number
+  restitution?: number
+  friction?: number
+  rotation?: Rotation
+  type?: 'fixed' | 'dynamic'
+  shape?: 'cuboid' | 'ball'
 }

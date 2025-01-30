@@ -1,40 +1,8 @@
 import * as THREE from 'three'
-import RAPIER, { RigidBody } from '@dimforge/rapier3d'
+import RAPIER from '@dimforge/rapier3d'
 import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js'
 import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
-
-export const config = {
-  velocityY: 0,
-  gravity: 25,
-  worldSize: 500,
-  fov: 60,
-  aspect: window.innerWidth / window.innerHeight,
-  near: 1.0,
-  far: 1000.0,
-  showHelpers: false,
-  showBodyHelpers: true,
-  speed: {
-    move: 40,
-    rotate: 5,
-    jump: 45
-  },
-  offset: {
-    x: 0,
-    y: 4,
-    z: -22
-  },
-  lookAt: {
-    x: 0,
-    y: 10,
-    z: 50
-  },
-  light: {
-    intensity: 50,
-    distance: 0,
-    decay: 2
-  }
-}
 
 /**
  * Remove all the models types from the scene
@@ -48,56 +16,44 @@ export const resetModels = (scene: THREE.Scene) => {
   }
 }
 
-export const getGround = (
-  scene: THREE.Scene,
-  loader: THREE.TextureLoader,
-  config: any,
-  path: string,
+/**
+ * Add physic to the model for a given world
+ * @param world
+ * @param position
+ * @param size
+ * @param boundary
+ * @returns
+ */
+export const getPhysic = (
   world: RAPIER.World,
-  dynamicBodies: Record<BlockTypes, PhysicObject[]>
-): THREE.Object3D => {
-  const geometry = new THREE.PlaneGeometry(config.worldSize, config.worldSize)
-  const groundTexture = loader.load(new URL(path, import.meta.url) as unknown as string)
-
-  // Repeat the texture
-  groundTexture.wrapS = THREE.RepeatWrapping
-  groundTexture.wrapT = THREE.RepeatWrapping
-  groundTexture.repeat.set(10, 10) // Repeat the texture 10 times in both directions
-
-  const material = new THREE.MeshBasicMaterial({ map: groundTexture })
-  const ground = new THREE.Mesh(geometry, material)
-  ground.rotation.x = -Math.PI / 2 // Rotate the ground to make it horizontal
-  ground.position.set(1, -1, 1)
-  scene.add(ground)
-
-  // PHYSIC: Create a static rigid body for the ground
-  const rigidBodyDesc = RAPIER.RigidBodyDesc.fixed()
+  position: CoordinateTuple,
+  size: number | CoordinateTuple,
+  {
+    rotation,
+    boundary = 0,
+    restitution = 0,
+    friction = 0,
+    shape = 'cuboid',
+    type = 'fixed'
+  }: PhysicOptions
+) => {
+  // Create a fixed rigid body for the brick block
+  const rigidBodyDesc = RAPIER.RigidBodyDesc[type]().setTranslation(...position)
   const rigidBody = world.createRigidBody(rigidBodyDesc)
-  const colliderDesc = RAPIER.ColliderDesc.cuboid(500, 1, 500)
+  if (rotation) {
+    rigidBody.setRotation(rotation, true)
+  }
+  const coliderShape =
+    shape === 'cuboid'
+      ? RAPIER.ColliderDesc.cuboid(
+          ...((size as CoordinateTuple).map((x) => x * boundary) as CoordinateTuple)
+        )
+      : RAPIER.ColliderDesc.ball(size as number)
+  // Create a cuboid collider attached to the fixed rigid body
+  const colliderDesc = coliderShape.setRestitution(restitution).setFriction(friction)
   const collider = world.createCollider(colliderDesc, rigidBody)
 
-  // HELPER: Create a mesh to visualize the collider
-  const helper = new THREE.BoxHelper(ground, 0x000000)
-  if (config.showBodyHelpers) {
-    scene.add(helper)
-  }
-
-  dynamicBodies.ground.push({ model: ground, rigidBody, helper, collider })
-
-  return ground
-}
-
-export const loadSky = (
-  scene: THREE.Scene,
-  loader: THREE.TextureLoader,
-  config: any,
-  path: string
-) => {
-  const skyGeometry = new THREE.SphereGeometry(config.worldSize, 32, 32)
-  const skyTexture = loader.load(new URL(path, import.meta.url) as unknown as string)
-  const skyMaterial = new THREE.MeshBasicMaterial({ map: skyTexture, side: THREE.BackSide })
-  const sky = new THREE.Mesh(skyGeometry, skyMaterial)
-  scene.add(sky)
+  return { rigidBody, collider }
 }
 
 export const getOffset = (model: Model, config: any) => {
@@ -189,7 +145,7 @@ export const loadFonts = (model: Model, name: string) => {
 /**
  * Return threeJS valid 3D model
  */
-const loadModel = (): Promise<{ model: Model; gltf: any }> => {
+export const loadModel = (): Promise<{ model: Model; gltf: any }> => {
   return new Promise((resolve, reject) => {
     const loader = new GLTFLoader()
     loader.load(
@@ -203,7 +159,38 @@ const loadModel = (): Promise<{ model: Model; gltf: any }> => {
   })
 }
 
-const getAnimationsModel = (mixer: THREE.AnimationMixer, model: Model, gltf: any) => {
+/**
+ * Return threeJS valid 3D model
+ */
+export const loadGLTF = (
+  fileName: string,
+  { position, scale }: ModelOptions = {}
+): Promise<{ model: Model; gltf: any }> => {
+  return new Promise((resolve, reject) => {
+    const loader = new GLTFLoader()
+    loader.load(
+      `/${fileName}`,
+      (gltf) => {
+        const model = gltf.scene
+        model.castShadow = true
+        model.receiveShadow = false //default
+        if (position) model.position.set(...position)
+        if (scale) model.scale.set(...scale)
+        model.traverse((child) => {
+          if (child.isMesh) {
+            child.castShadow = true
+            child.receiveShadow = true
+          }
+        })
+        resolve({ model, gltf })
+      },
+      undefined,
+      reject
+    )
+  })
+}
+
+export const getAnimationsModel = (mixer: THREE.AnimationMixer, model: Model, gltf: any) => {
   // Flip the model
   model.rotateOnAxis(new THREE.Vector3(0, 1, 0), Math.PI)
   // action.play()
@@ -213,97 +200,89 @@ const getAnimationsModel = (mixer: THREE.AnimationMixer, model: Model, gltf: any
 }
 
 /**
- * Generate model with predefined information (e.g. position) and add it to the scene
+ * Update the animation of the model based on given time
  */
-export const getModel = async (
-  scene: THREE.Scene,
-  world: RAPIER.World,
-  dynamicBodies: Record<BlockTypes, PhysicObject[]>
-): Promise<UserModel> => {
-  // MODEL: Load
-  const { model, gltf } = await loadModel()
+export const updateAnimation = (
+  mixer: THREE.AnimationMixer,
+  actions: Record<string, THREE.AnimationAction>,
+  delta: number = 0,
+  speed: number = 0
+) => {
+  const coefficient = 0.1
+  if (delta) {
+    mixer.update(delta * speed * coefficient)
+    actions.run.play()
+  } else {
+    actions.run.stop()
+  }
+}
 
-  // ANIMATION: Create an AnimationMixer and set the first animation to play
-  const mixer = new THREE.AnimationMixer(model)
-  model.scale.set(0.03, 0.03, 0.03)
-  model.position.y = 1
-  const actions = getAnimationsModel(mixer, model, gltf)
-  scene.add(model)
-
-  // PHYSIC: Create a dynamic rigid body for the model
-  const modelPosition = [model.position.x, model.position.y, model.position.z] as CoordinateTuple
-  const rigidBodyDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(...modelPosition)
-  const rigidBody = world.createRigidBody(rigidBodyDesc)
-  rigidBody.setRotation(model.rotation, true)
-
-  // PHYSIC: Create a cuboid collider attached to the dynamic rigidBody.
+/**
+ * Get the size of a model
+ */
+export const getModelSize = (model: THREE.Object3D): THREE.Vector3 => {
   const box = new THREE.Box3().setFromObject(model)
   const size = new THREE.Vector3()
   box.getSize(size)
-
-  const helper = new THREE.BoxHelper(model, 0x000000)
-
-  if (config.showBodyHelpers) {
-    scene.add(helper)
-  }
-
-  const scaledSize = [size.x, size.y, size.z].map((x) => x * 0.6) as CoordinateTuple
-  // const scaledSize = [model.with, model.innerHeight, model.deep].map((x) => x * 0.6) as CoordinateTuple
-  const colliderDesc = RAPIER.ColliderDesc.cuboid(...(scaledSize as CoordinateTuple))
-  const collider = world.createCollider(colliderDesc, rigidBody)
-
-  // PHYSIC: Store the model and its rigid body for later use
-  dynamicBodies.characters.push({ model, rigidBody, collider, helper })
-
-  return { model, mixer, status: {}, actions }
+  return size
 }
 
-export const setBrickBlock = (block: GameBlock, scene: THREE.Scene, world: RAPIER.World) => {
-  const position: CoordinateTuple = [block.position.x, block.position.y, block.position.z]
-  const loader = new THREE.TextureLoader()
-  const size = [2.5, 2.5, 2.5]
-  const texture = loader.load(new URL('../assets/brick.jpg', import.meta.url) as unknown as string)
-  const material = new THREE.MeshBasicMaterial({ map: texture })
-  const geometry = new THREE.BoxGeometry(...size)
-  const cube = new THREE.Mesh(geometry, material)
-  cube.position.set(...position)
-  scene.add(cube)
+// https://threejs.org/docs/#api/en/objects/InstancedMesh
+export const instanceMatrixMesh = (
+  mesh: Model,
+  scene: THREE.Scene,
+  options: ModelOptions[]
+): THREE.InstancedMesh<any, any, THREE.InstancedMeshEventMap>[] => {
+  const count = options.length
+  const geometry = mesh.geometry
+  const material = mesh.material
+  const instancedMesh = new THREE.InstancedMesh(geometry, material, count)
+  instancedMesh.receiveShadow = true // Enable receiving shadows
 
-  // Create a dynamic rigid-body.
-  const rigidBodyDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(...position)
-  const rigidBody = world.createRigidBody(rigidBodyDesc)
-  rigidBody.setRotation({ w: 1.0, x: 0.5, y: 0.5, z: 0.5 }, true)
+  return options.map(({ position, rotation, scale }, index) => {
+    const matrix = new THREE.Matrix4()
+    const positionVector = new THREE.Vector3(...(position ?? [0, 0, 0]))
+    const rotationEuler = new THREE.Euler(...(rotation ?? [0, 0, 0]))
+    const scaleVector = new THREE.Vector3(...(scale ?? [1, 1, 1]))
 
-  // Create a cuboid collider attached to the dynamic rigidBody.
-  const colliderDesc = RAPIER.ColliderDesc.cuboid(...(size.map((x) => x * 0.6) as CoordinateTuple))
-  const collider = world.createCollider(colliderDesc, rigidBody)
+    matrix.compose(positionVector, new THREE.Quaternion().setFromEuler(rotationEuler), scaleVector)
+    instancedMesh.setMatrixAt(index, matrix)
 
-  return { model: cube, rigidBody, collider }
+    scene.add(instancedMesh)
+
+    return instancedMesh
+  })
 }
 
-export const setCoinBlock = (block: GameBlock, scene: THREE.Scene, world: RAPIER.World) => {
-  const material = new THREE.MeshBasicMaterial({ color: 0xffff00 })
-  const geometry = new THREE.CylinderGeometry(1.25, 1.25, 0.1, 32)
-  const coin = new THREE.Mesh(geometry, material)
-  coin.position.set(block.position.x, block.position.y, block.position.z)
-  coin.rotation.x = Math.PI / 2
-  scene.add(coin)
+export const instanceMatrixModel = (
+  model: THREE.Group<THREE.Object3DEventMap>,
+  scene: THREE.Scene,
+  options: ModelOptions[]
+): Model => {
+  model.traverse((child) => {
+    if (child.isMesh) {
+      instanceMatrixMesh(child, scene, options)
+    }
+  })
 }
 
-export const setQuestionBlock = (block: GameBlock, scene: THREE.Scene, world: RAPIER.World) => {
-  const loader = new THREE.TextureLoader()
-  const question = loader.load(
-    new URL('../assets/question_symbol.jpg', import.meta.url) as unknown as string
-  )
-  const empty = loader.load(
-    new URL('../assets/question_empty.jpg', import.meta.url) as unknown as string
-  )
+export const cloneModel = (
+  model: Model,
+  scene: THREE.Scene,
+  world: RAPIER.World,
+  options: ModelOptions[]
+) => {
+  return options.map(({ position, rotation = [0, 0, 0], scale = [1, 1, 1], size }) => {
+    const clone = model.clone()
+    clone.position.set(...position!)
+    clone.rotation.set(...rotation!)
+    clone.scale.set(...scale!)
+    scene.add(clone)
+    const { rigidBody, collider } = getPhysic(world, position!, size ?? scale, {
+      boundary: 0.8,
+      shape: 'ball'
+    })
 
-  // Load the textures
-  const textures = [question, question, empty, empty, question, question]
-  const materials = textures.map((texture) => new THREE.MeshBasicMaterial({ map: texture }))
-  const geometry = new THREE.BoxGeometry(2.5, 2.5, 2.5)
-  const cube = new THREE.Mesh(geometry, materials)
-  cube.position.set(block.position.x, block.position.y, block.position.z)
-  scene.add(cube)
+    return { model, rigidBody, collider }
+  })
 }

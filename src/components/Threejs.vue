@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import * as THREE from 'three';
-import { ref, onMounted, onUnmounted, watch, h } from 'vue';
+import { ref, onMounted, onUnmounted, watch } from 'vue';
 import { useUsersStore } from "@/stores/users";
 import { useUiStore } from "@/stores/ui";
 import Controls from '@/components/Controls.vue'
 import TouchControl from '@/components/TouchControl.vue'
-import { resetModels, getGround, loadSky, setThirdPersonCamera, loadLights, config, setBrickBlock, setQuestionBlock, setCoinBlock, getModel } from '@/utils/threeJs';
+import { resetModels, setThirdPersonCamera, loadLights, updateAnimation } from '@/utils/threeJs';
 import RAPIER from '@dimforge/rapier3d'
+import { movePlayer } from '@/utils/game';
+import { getPlayer, getGround, getSky, getBrickBlock, getQuestionBlock, getCoinBlock } from '@/utils/models';
+import { gameConfig } from '@/config';
 
 const gravity = new RAPIER.Vector3(0.0, -9.81, 0.0)
 const world = new RAPIER.World(gravity)
@@ -53,11 +56,11 @@ watch(() => userStore.users, async (newValue) => {
       const cube = players[user.id];
       if (!cube) {
         resetModels(scene)
-        getModel(scene, world, dynamicBodies).then(cube => {
+        getPlayer(scene, world, dynamicBodies, gameConfig).then(cube => {
           players[user.id] = cube;
         });
         // TODO: Avoid to create a new player and remove models by ID
-        player = await getModel(scene, world, dynamicBodies);
+        player = await getPlayer(scene, world, dynamicBodies, gameConfig);
         // loadFonts(player.model, userStore.user.name);
       } else {
         updatePosition(cube, user, delta);
@@ -72,7 +75,7 @@ watch(() => userStore.users, async (newValue) => {
 const setPlayers = async (scene: THREE.Scene): Promise<Record<string, UserModel>> => {
   const players = userStore.users.reduce(async (acc, user) => ({
     ...acc,
-    [user.id]: getModel(scene, world, dynamicBodies)
+    [user.id]: getPlayer(scene, world, dynamicBodies, gameConfig)
   }), {});
 
   return players;
@@ -82,9 +85,9 @@ const setBlocks = (scene: THREE.Scene) => {
   userStore.blocks.forEach((block) => {
     let model, rigidBody, collider;
     switch (block.type) {
-      case 'brick': ({ model, rigidBody, collider } = setBrickBlock(block, scene, world)); break;
-      case 'question': setQuestionBlock(block, scene, world); break;
-      case 'coin': setCoinBlock(block, scene, world); break;
+      case 'brick': ({ model, rigidBody, collider } = getBrickBlock(block, scene, world)); break;
+      case 'question': getQuestionBlock(block, scene, world); break;
+      case 'coin': getCoinBlock(block, scene, world); break;
       default:
         break;
     }
@@ -93,26 +96,6 @@ const setBlocks = (scene: THREE.Scene) => {
       dynamicBodies.blocks.push({ model, rigidBody, collider });
     }
   });
-}
-
-/**
- * Update the animation of the model based on given time
- */
-const updateAnimation = (
-  mixer: THREE.AnimationMixer,
-  actions: Record<string, THREE.AnimationAction>,
-  delta: number = 0,
-  speed: number = 0
-) => {
-  const coefficient = 0.1;
-  // const clip = mixer.clipAction();
-  // const action = mixer.clipAction(clip);
-  if (delta) {
-    mixer.update(delta * speed * coefficient);
-    actions.run.play();
-  } else {
-    actions.run.stop();
-  }
 }
 
 /**
@@ -128,87 +111,13 @@ const updatePosition = (character: UserModel, user: User, delta: number) => {
       model.rotation.set(user.rotation._x, user.rotation._y, user.rotation._z);
     } 
   }
-  updateAnimation(mixer, actions, delta, config.speed.move);
-}
-
-/**
- * Move the player and emit new scene information
- */
-const movePlayer = (player: UserModel, delta: number, camera: THREE.PerspectiveCamera) => {
-  const { model, mixer, actions } = player;
-  if (isFocused.value) {
-    if (uiStore.controls.up) {
-      // model.position.z -= 0.1
-      // Calculate the forward vector
-      const forward = new THREE.Vector3();
-      model.getWorldDirection(forward);
-      forward.multiplyScalar(config.speed.move * 0.01);
-
-      // Add the forward vector to the model's position
-      model.position.add(forward);
-    }
-    if (uiStore.controls.down) {
-      // model.position.z += 0.1
-      // Calculate the forward vector
-      const forward = new THREE.Vector3();
-      model.getWorldDirection(forward);
-      forward.negate();
-      forward.multiplyScalar(config.speed.move * 0.01);
-
-      // Add the forward vector to the model's position
-      model.position.add(forward);
-    }
-    if (uiStore.controls.left) {
-      model.rotateY(config.speed.rotate * 0.01)
-    }
-    if (uiStore.controls.right) {
-      model.rotateY(-config.speed.rotate * 0.01)
-    }
-
-    // TODO: Model is updated only on key press and not on movement, so jump animation is not completed
-    if (uiStore.controls.jump) {
-      if (!player.status.jumping) {
-        config.velocityY = config.speed.jump * 0.01  // Set an upward velocity when the space key is pressed
-        player.status.jumping = true
-      }
-    }
-
-    if (mixer && actions) {
-      if ([
-        'left',
-        'right',
-        'up',
-        'down',
-        'jump',
-      ].some(action => uiStore.controls[action])) {
-        updateAnimation(mixer, actions, delta, config.speed.move);
-        
-        // For some reason the rotation is reported as Euler type but it's not
-        userStore.updateUserData({ position: model.position, rotation: model.rotation });
-      } else {
-        updateAnimation(mixer, actions);
-      }
-    } 
-  }
-
-  // Apply the velocity and gravity
-  config.velocityY -= (config.gravity * 0.001)
-  model.position.y += config.velocityY
-
-  // Prevent the model from falling below the ground
-  if (model.position.y < 0) {
-    model.position.y = 0
-    config.velocityY = 0
-    player.status.jumping = false
-  }
-
-  setThirdPersonCamera(camera, config, player);
+  updateAnimation(mixer, actions, delta, gameConfig.speed.move);
 }
 
 const loadEnv = (scene: THREE.Scene) => {
   const loader = new THREE.TextureLoader();
-  getGround(scene, loader, config, '../assets/grass2.jpg', world, dynamicBodies)
-  loadSky(scene, loader, config, '../assets/landscape.jpg');
+  getGround(scene, loader, gameConfig, '../assets/grass2.jpg', world, dynamicBodies)
+  getSky(scene, loader, gameConfig, '../assets/landscape.jpg');
 }
 
 const onBrowserResize = (camera: THREE.PerspectiveCamera, renderer: THREE.WebGLRenderer) => {
@@ -225,7 +134,7 @@ const loadScene = (canvas: HTMLCanvasElement) => {
   const renderer = new THREE.WebGLRenderer({ canvas: canvas });
   renderer.setSize( window.innerWidth, window.innerHeight );
   renderer.setClearColor(0x000000); // Set background color to black
-  globalCamera = new THREE.PerspectiveCamera( config.fov, config.aspect, config.near, config.far );
+  globalCamera = new THREE.PerspectiveCamera( gameConfig.fov, gameConfig.aspect, gameConfig.near, gameConfig.far );
   scene = new THREE.Scene();
 
   return { scene, renderer, camera: globalCamera };
@@ -292,11 +201,10 @@ const init = async(canvas: HTMLCanvasElement) => {
     // POPULATE
     resetModels(scene)
     players = await setPlayers(scene);
-    player = await getModel(scene, world, dynamicBodies);
+    player = await getPlayer(scene, world, dynamicBodies, gameConfig);
     // loadFonts(player.model, userStore.user.name);
     loadEnv(scene);
     setBlocks(scene);
-
     userStore.dynamicBodies = dynamicBodies;
     
     function animate() {
@@ -304,15 +212,16 @@ const init = async(canvas: HTMLCanvasElement) => {
       delta = clock.getDelta();
 
       if (player) {
-        movePlayer(player, delta, camera);
+        movePlayer(player, gameConfig, delta, dynamicBodies, uiStore.controls, userStore.updateUserData, isFocused.value);
+        setThirdPersonCamera(camera, gameConfig, player)
       }
 
       // Update the position and rotation of your objects based on the physics simulation
-      dynamicBodies.characters.forEach(({ model, rigidBody, helper }) => {
+      dynamicBodies.characters.forEach(({ rigidBody, helper }) => {
         // HELPERS: Update model body position
-        if (config.showBodyHelpers) {
-          helper.position.set(model.position.x, model.position.y, model.position.z);
-          helper.rotation.set(model.rotation.x, model.rotation.y, model.rotation.z);
+        if (gameConfig.showBodyHelpers) {
+          helper.position.set(rigidBody.position);
+          helper.rotation.set(rigidBody.rotation);
           helper.update();
         }
       });
@@ -328,7 +237,7 @@ const init = async(canvas: HTMLCanvasElement) => {
 </script>
 
 <template>
-  <Controls :config="config" @update="onConfigUpdate" />
+  <Controls :config="gameConfig" @update="onConfigUpdate" />
 
   <canvas ref="canvas"></canvas>
 
