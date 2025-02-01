@@ -266,23 +266,14 @@ export const instanceMatrixModel = (
   })
 }
 
-export const cloneModel = (
-  model: Model,
-  scene: THREE.Scene,
-  world: RAPIER.World,
-  options: ModelOptions[]
-) => {
-  return options.map(({ position, rotation = [0, 0, 0], scale = [1, 1, 1], size }) => {
+export const cloneModel = (model: Model, scene: THREE.Scene, options: ModelOptions[]) => {
+  return options.map(({ position, rotation = [0, 0, 0], scale = [1, 1, 1] }) => {
     const clone = model.clone()
     clone.position.set(...position!)
     clone.rotation.set(...rotation!)
     clone.scale.set(...scale!)
     scene.add(clone)
-    const { rigidBody, collider } = getPhysic(world, position!, size ?? scale, {
-      boundary: 0.8,
-      shape: 'ball'
-    })
 
-    return { model, rigidBody, collider }
+    return model
   })
 }
