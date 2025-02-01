@@ -1,9 +1,23 @@
 import * as THREE from 'three'
 import { updateAnimation } from '@/utils/threeJs'
+import type RAPIER from '@dimforge/rapier3d'
 
+const moveJump = (player: UserModel, jumpStrength: number) => {
+  const impulse = { x: 0, y: jumpStrength, z: 0 }
+  player.rigidBody.applyImpulse(impulse, true)
+  player.status.jumping = true
+}
+
+/**
+ * Move forward or backward if no collision is detected
+ * @param player
+ * @param dynamicBodies
+ * @param distance
+ * @param backwards
+ */
 export const moveForward = (
   player: UserModel,
-  dynamicBodies: Record<BlockTypes, PhysicObject[]>,
+  bodies: PhysicObject[],
   distance: number,
   backwards: boolean = false
 ) => {
@@ -22,7 +36,7 @@ export const moveForward = (
   const newPosition = oldPosition.clone().add(forward)
 
   // Check for collisions with the new position
-  const isColliding = dynamicBodies.blocks.some(({ model }) => {
+  const isColliding = bodies.some(({ model }) => {
     const difference = model.position.distanceTo(newPosition)
     return difference < collision // Adjust this value based on your collision detection needs
   })
@@ -40,6 +54,7 @@ export const moveForward = (
 export const movePlayer = (
   player: UserModel,
   config: any,
+  world,
   delta: number,
   dynamicBodies: Record<BlockTypes, PhysicObject[]>,
   controls: any,
@@ -50,10 +65,10 @@ export const movePlayer = (
   if (isFocused) {
     const coefficient = 0.01
     if (controls.up) {
-      moveForward(player, dynamicBodies, config.speed.move * coefficient)
+      moveForward(player, dynamicBodies.blocks, config.speed.move * coefficient)
     }
     if (controls.down) {
-      moveForward(player, dynamicBodies, config.speed.move * coefficient, true)
+      moveForward(player, dynamicBodies.blocks, config.speed.move * coefficient, true)
     }
     if (controls.left) {
       model.rotateY(config.speed.rotate * coefficient)
@@ -66,10 +81,7 @@ export const movePlayer = (
 
     // TODO: Model is updated only on `key press and not on movement, so jump animation is not completed
     if (controls.jump) {
-      if (!player.status.jumping) {
-        config.velocityY = config.speed.jump * coefficient // Set an upward velocity when the space key is pressed
-        player.status.jumping = true
-      }
+      moveJump(player, config.jump)
     }
 
     if (mixer && actions) {

@@ -9,7 +9,7 @@ type UserModel = {
   status: {
     jumping?: boolean
   }
-  rigidBody
+  rigidBody: RAPIER.RigidBody
   collider
   helper
   actions: Record<string, THREE.AnimationAction>

@@ -123,6 +123,7 @@ export const getPlayer = async (
   const size = getModelSize(model)
   const { rigidBody, collider } = getPhysic(world, model.position, size.toArray(), {
     boundary: 0.8,
+    friction: 0,
     type: 'dynamic'
   })
 

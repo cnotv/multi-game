@@ -8,6 +8,7 @@ export const gameConfig = {
   far: 1000.0,
   showHelpers: false,
   showBodyHelpers: true,
+  jump: 20,
   speed: {
     move: 40,
     rotate: 5,

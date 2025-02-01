@@ -8,7 +8,7 @@ import TouchControl from '@/components/TouchControl.vue'
 import { resetModels, setThirdPersonCamera, loadLights, updateAnimation } from '@/utils/threeJs';
 import RAPIER from '@dimforge/rapier3d'
 import { movePlayer } from '@/utils/game';
-import { getPlayer, getGround, getSky, getBrickBlock, getQuestionBlock, getCoinBlock } from '@/utils/models';
+import { getPlayer, getGround, getSky, getBrickBlock, getQuestionBlock, getCoinBlock, getBall } from '@/utils/models';
 import { gameConfig } from '@/config';
 
 const gravity = new RAPIER.Vector3(0.0, -9.81, 0.0)
@@ -205,6 +205,23 @@ const init = async(canvas: HTMLCanvasElement) => {
     // loadFonts(player.model, userStore.user.name);
     loadEnv(scene);
     setBlocks(scene);
+
+    player.model.rotation.set(0, 1.5, 0);
+    const balls = [
+      getBall(1, [10, 2, 0], scene, world),
+      getBall(1, [10, 5, 0], scene, world),
+      getBall(1, [10, 6, 0], scene, world),
+      getBall(1, [10, 7, 0], scene, world),
+      getBall(1, [10, 8, 0], scene, world),
+      getBall(1, [10, 9, 0], scene, world),
+      getBall(1, [10, 5, 0], scene, world),
+      getBall(1, [10, 5, 0], scene, world),
+      getBall(1, [10, 20, 0], scene, world),
+      getBall(1, [10, 15, 0], scene, world),
+      getBall(1, [10, 30, 0], scene, world),
+      getBall(1, [10, 50, 0], scene, world),
+    ];
+
     userStore.dynamicBodies = dynamicBodies;
     
     function animate() {
@@ -212,12 +229,22 @@ const init = async(canvas: HTMLCanvasElement) => {
       delta = clock.getDelta();
 
       if (player) {
-        movePlayer(player, gameConfig, delta, dynamicBodies, uiStore.controls, userStore.updateUserData, isFocused.value);
+        movePlayer(player, gameConfig, world, delta, dynamicBodies, uiStore.controls, userStore.updateUserData, isFocused.value);
         setThirdPersonCamera(camera, gameConfig, player)
       }
 
+      balls.forEach(({ model, rigidBody }) => {
+        let position = rigidBody.translation();
+        model.position.set(position.x, position.y, position.z);
+        let rotation = rigidBody.rotation();
+        model.rotation.set(rotation.x, rotation.y, rotation.z);
+      });
+
       // Update the position and rotation of your objects based on the physics simulation
-      dynamicBodies.characters.forEach(({ rigidBody, helper }) => {
+      dynamicBodies.characters.forEach(({ model, rigidBody, helper }) => {
+        const position = rigidBody.translation();
+        model.position.set(position.x, position.y, position.z);
+ 
         // HELPERS: Update model body position
         if (gameConfig.showBodyHelpers) {
           helper.position.set(rigidBody.position);
