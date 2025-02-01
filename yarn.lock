@@ -318,10 +318,10 @@
     "@babel/helper-validator-identifier" "^7.22.20"
     to-fast-properties "^2.0.0"
 
-"@dimforge/rapier3d@^0.13.1":
-  version "0.13.1"
-  resolved "https://registry.npmjs.org/@dimforge/rapier3d/-/rapier3d-0.13.1.tgz#1794590ccf808db9c5eec3b9ad1ae043980c7bd8"
-  integrity sha512-ITCUCqks70njfFt7S+AEynMw4mpNJLmVWkWDzePhe74YLRWbe4Pu8VOyks2hqHBeTCj2Ts7SE5xoyvg9VsyNMg==
+"@dimforge/rapier3d@^0.14.0":
+  version "0.14.0"
+  resolved "https://registry.npmjs.org/@dimforge/rapier3d/-/rapier3d-0.14.0.tgz#52a8770ecde3968b5f420f4ed6db1a1df953a432"
+  integrity sha512-+R9T/AGbvdRLentporVaOYEYjPHKdUeUuGObOBAskhSv8fFFyTiUcGMKhRH4VyCaGP8JAKMLapAETR4xAvJqlg==
 
 "@esbuild/aix-ppc64@0.20.2":
   version "0.20.2"

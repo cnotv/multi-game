@@ -20,7 +20,7 @@
     "format": "prettier --write src/"
   },
   "dependencies": {
-    "@dimforge/rapier3d": "^0.13.1",
+    "@dimforge/rapier3d": "^0.14.0",
     "dat.gui": "^0.7.9",
     "lodash": "^4.17.21",
     "pinia": "^2.1.7",
