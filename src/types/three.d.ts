@@ -41,6 +41,10 @@ interface PhysicOptions {
   restitution?: number
   friction?: number
   rotation?: Rotation
+  weight?: number
+  mass?: number
+  density?: number
+  dominance?: number
   type?: 'fixed' | 'dynamic'
   shape?: 'cuboid' | 'ball'
 }

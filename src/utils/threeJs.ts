@@ -21,7 +21,19 @@ export const resetModels = (scene: THREE.Scene) => {
  * @param world
  * @param position
  * @param size
- * @param boundary
+ * @param {Object} options - The options for the physics body and collider.
+ * @param {number} [options.boundary=0] - The boundary size of the collider.
+ * @param {number} [options.restitution=0] - The restitution (bounciness) of the collider.
+ * @param {number} [options.friction=0] - The friction of the collider against other objects.
+ * @param {Rotation} [options.rotation] - The initial rotation of the object.
+ * @param {number} [options.weight=1] - The gravity scale applied to the object to simulate the weight.
+ * @param {number} [options.mass=1] - The mass in the sense of resistance from movement.
+ * @param {number} [options.density=1] - The density of the object.
+ * @param {number} [options.dominance=1] - The influence level from other bodies.
+ * @param {'fixed' | 'dynamic'} [options.type='fixed'] - The type of the rigid body.
+ * @param {'cuboid' | 'ball'} [options.shape='cuboid'] - The shape of the collider.
+ * @returns {Object} The created rigid body and collider.
+
  * @returns
  */
 export const getPhysic = (
@@ -33,12 +45,19 @@ export const getPhysic = (
     boundary = 0,
     restitution = 0,
     friction = 0,
+    mass = 1,
+    density = 1,
+    weight = 1,
+    dominance = 0,
     shape = 'cuboid',
-    type = 'fixed'
-  }: PhysicOptions
+    type = 'fixed',
+  }: PhysicOptions,
 ) => {
   // Create a fixed rigid body for the brick block
-  const rigidBodyDesc = RAPIER.RigidBodyDesc[type]().setTranslation(...position)
+  const rigidBodyDesc = RAPIER.RigidBodyDesc[type]()
+    .setTranslation(...position)
+    .setGravityScale(weight)
+    .setDominanceGroup(dominance)
   const rigidBody = world.createRigidBody(rigidBodyDesc)
   if (rotation) {
     rigidBody.setRotation(rotation, true)
@@ -46,11 +65,15 @@ export const getPhysic = (
   const coliderShape =
     shape === 'cuboid'
       ? RAPIER.ColliderDesc.cuboid(
-          ...((size as CoordinateTuple).map((x) => x * boundary) as CoordinateTuple)
+          ...((size as CoordinateTuple).map((x) => x * boundary) as CoordinateTuple),
         )
       : RAPIER.ColliderDesc.ball(size as number)
   // Create a cuboid collider attached to the fixed rigid body
-  const colliderDesc = coliderShape.setRestitution(restitution).setFriction(friction)
+  const colliderDesc = coliderShape
+    .setRestitution(restitution)
+    .setFriction(friction)
+    .setMass(mass)
+    .setDensity(density)
   const collider = world.createCollider(colliderDesc, rigidBody)
 
   return { rigidBody, collider }
@@ -77,7 +100,7 @@ export const getLookAt = (model: Model, config: any) => {
 export const setThirdPersonCamera = (
   camera: THREE.PerspectiveCamera,
   config: any,
-  player: UserModel | null
+  player: UserModel | null,
 ) => {
   if (player) {
     const offset = getOffset(player.model, config)
@@ -129,7 +152,7 @@ export const loadFonts = (model: Model, name: string) => {
     const geometry = new TextGeometry(name, {
       font: font,
       size: 0.2,
-      depth: 0.1
+      depth: 0.1,
     })
 
     // Add the TextGeometry to the model
@@ -154,7 +177,7 @@ export const loadModel = (): Promise<{ model: Model; gltf: any }> => {
         resolve({ model: gltf.scene, gltf })
       },
       undefined,
-      reject
+      reject,
     )
   })
 }
@@ -164,7 +187,7 @@ export const loadModel = (): Promise<{ model: Model; gltf: any }> => {
  */
 export const loadGLTF = (
   fileName: string,
-  { position, scale }: ModelOptions = {}
+  { position, scale }: ModelOptions = {},
 ): Promise<{ model: Model; gltf: any }> => {
   return new Promise((resolve, reject) => {
     const loader = new GLTFLoader()
@@ -185,7 +208,7 @@ export const loadGLTF = (
         resolve({ model, gltf })
       },
       undefined,
-      reject
+      reject,
     )
   })
 }
@@ -195,7 +218,7 @@ export const getAnimationsModel = (mixer: THREE.AnimationMixer, model: Model, gl
   model.rotateOnAxis(new THREE.Vector3(0, 1, 0), Math.PI)
   // action.play()
   return {
-    run: mixer.clipAction(gltf.animations[0])
+    run: mixer.clipAction(gltf.animations[0]),
   }
 }
 
@@ -206,7 +229,7 @@ export const updateAnimation = (
   mixer: THREE.AnimationMixer,
   actions: Record<string, THREE.AnimationAction>,
   delta: number = 0,
-  speed: number = 0
+  speed: number = 0,
 ) => {
   const coefficient = 0.1
   if (delta) {
@@ -231,7 +254,7 @@ export const getModelSize = (model: THREE.Object3D): THREE.Vector3 => {
 export const instanceMatrixMesh = (
   mesh: Model,
   scene: THREE.Scene,
-  options: ModelOptions[]
+  options: ModelOptions[],
 ): THREE.InstancedMesh<any, any, THREE.InstancedMeshEventMap>[] => {
   const count = options.length
   const geometry = mesh.geometry
@@ -257,7 +280,7 @@ export const instanceMatrixMesh = (
 export const instanceMatrixModel = (
   model: THREE.Group<THREE.Object3DEventMap>,
   scene: THREE.Scene,
-  options: ModelOptions[]
+  options: ModelOptions[],
 ): Model => {
   model.traverse((child) => {
     if (child.isMesh) {

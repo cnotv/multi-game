@@ -63,7 +63,7 @@ watch(() => userStore.users, async (newValue) => {
         player = await getPlayer(scene, world, dynamicBodies, gameConfig);
         // loadFonts(player.model, userStore.user.name);
       } else {
-        updatePosition(cube, user, delta);
+        updatePosition(cube, user, dynamicBodies, delta);
       }
     });
   }
@@ -101,7 +101,7 @@ const setBlocks = (scene: THREE.Scene) => {
 /**
  * Update the position of the character
  */
-const updatePosition = (character: UserModel, user: User, delta: number) => {
+const updatePosition = (character: UserModel, user: User, dynamicBodies, delta: number) => {
   const { model, mixer, actions } = character;
   if (model) {
     if (user.position && model.position) {
@@ -223,7 +223,7 @@ const init = async(canvas: HTMLCanvasElement) => {
     ];
 
     userStore.dynamicBodies = dynamicBodies;
-    
+
     function animate() {
       requestAnimationFrame(animate);
       delta = clock.getDelta();
