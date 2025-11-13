@@ -1,5 +1,5 @@
 services:
-  multi_game_client:
+  client:
     build:
       context: .
     environment:
